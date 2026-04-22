@@ -31,7 +31,7 @@ export async function fetchMaterials(): Promise<MaterialItem[]> {
   const { data, error } = await supabase
     .from('material_inventory')
     .select('*')
-    .order('updated_at', { ascending: false });
+    .order('location', { ascending: true });
   if (error) throw error;
   return data || [];
 }
@@ -83,7 +83,7 @@ export async function fetchSurplus(): Promise<SurplusItem[]> {
   const { data, error } = await supabase
     .from('surplus_inventory')
     .select('*')
-    .order('updated_at', { ascending: false });
+    .order('location', { ascending: true });
   if (error) throw error;
   return data || [];
 }
