@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Col, Row, Image, Empty, Spin, Tag, Checkbox, Button, Space, App, Modal } from 'antd';
-import { DeleteOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
+import { Card, Col, Row, Image, Empty, Spin, Tag, Checkbox, Button, Space, App } from 'antd';
+import { DeleteOutlined, CopyOutlined } from '@ant-design/icons';
 import { fetchPhotos, subscribePhotos, deletePhoto, deletePhotos } from '../lib/api';
 import type { PhotoRecord } from '../lib/api';
 
