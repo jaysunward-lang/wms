@@ -241,3 +241,22 @@ export function subscribePhotos(onInsert: (record: PhotoRecord) => void) {
       (payload) => onInsert(payload.new as PhotoRecord))
     .subscribe();
 }
+
+function extractFilename(photoUrl: string): string {
+  return photoUrl.split('/').pop() || '';
+}
+
+export async function deletePhoto(id: number, photoUrl: string): Promise<void> {
+  const filename = extractFilename(photoUrl);
+  if (filename) await supabase.storage.from('photos').remove([filename]);
+  const { error } = await supabase.from('photos').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function deletePhotos(photos: { id: number; photo_url: string }[]): Promise<void> {
+  const filenames = photos.map((p) => extractFilename(p.photo_url)).filter(Boolean);
+  if (filenames.length) await supabase.storage.from('photos').remove(filenames);
+  const ids = photos.map((p) => p.id);
+  const { error } = await supabase.from('photos').delete().in('id', ids);
+  if (error) throw error;
+}
