@@ -8,6 +8,7 @@ export interface MaterialItem {
   quantity: number;
   location: string;
   updated_at: string;
+  low_stock_threshold?: number | null;
 }
 
 export interface SurplusItem {
@@ -47,10 +48,10 @@ export async function upsertMaterial(
   unit: string,
   quantity: number,
   location: string,
+  lowStockThreshold?: number | null,
 ): Promise<void> {
   const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).slice(0, 16).replace('T', ' ');
 
-  // 查找是否已存在同名+同库位的记录
   const { data: existing } = await supabase
     .from('material_inventory')
     .select('id, quantity')
@@ -59,15 +60,14 @@ export async function upsertMaterial(
     .maybeSingle();
 
   if (existing) {
-    const { error } = await supabase
-      .from('material_inventory')
-      .update({ quantity: existing.quantity + quantity, updated_at: now })
-      .eq('id', existing.id);
+    const updateData: Record<string, unknown> = { quantity: existing.quantity + quantity, updated_at: now };
+    if (lowStockThreshold !== undefined) updateData.low_stock_threshold = lowStockThreshold ?? null;
+    const { error } = await supabase.from('material_inventory').update(updateData).eq('id', existing.id);
     if (error) throw error;
   } else {
     const { error } = await supabase
       .from('material_inventory')
-      .insert({ material_name: materialName, unit, quantity, location, updated_at: now });
+      .insert({ material_name: materialName, unit, quantity, location, updated_at: now, low_stock_threshold: lowStockThreshold ?? null });
     if (error) throw error;
   }
 }

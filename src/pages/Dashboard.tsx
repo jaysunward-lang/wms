@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Col, Row, Statistic, Table, Tag, theme, Spin, Image, Empty, Radio } from 'antd';
+import { Card, Col, Row, Statistic, Table, Tag, theme, Spin, Image, Empty, Radio, App } from 'antd';
 import {
   DatabaseOutlined,
   InboxOutlined,
@@ -58,6 +58,7 @@ const recentColumns: ColumnsType<RecentRecord> = [
 
 export default function Dashboard() {
   const { token } = theme.useToken();
+  const { notification } = App.useApp();
   const location = useLocation();
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [surplus, setSurplus] = useState<SurplusItem[]>([]);
@@ -70,10 +71,29 @@ export default function Dashboard() {
   useEffect(() => {
     setLoading(true);
     Promise.all([fetchMaterials(), fetchSurplus(), fetchRecent()])
-      .then(([m, s, r]) => { setMaterials(m); setSurplus(s); setRecent(r); })
+      .then(([m, s, r]) => {
+        setMaterials(m);
+        setSurplus(s);
+        setRecent(r);
+        // Check low stock thresholds
+        const lowItems = m.filter(
+          (i) => i.low_stock_threshold != null && i.quantity <= i.low_stock_threshold!
+        );
+        if (lowItems.length > 0) {
+          notification.warning({
+            message: `低库存警告（${lowItems.length} 项）`,
+            description: lowItems
+              .map((i) => `${i.material_name}（${i.location}）：${i.quantity} ${i.unit}，阈值 ${i.low_stock_threshold}`)
+              .join('\n'),
+            placement: 'bottomRight',
+            duration: 10,
+            style: { whiteSpace: 'pre-line' },
+          });
+        }
+      })
       .finally(() => setLoading(false));
     fetchPhotos(6).then(setPhotos).catch(() => {});
-  }, [location.key]);
+  }, [location.key, notification]);
 
   // Realtime 订阅新照片
   useEffect(() => {
