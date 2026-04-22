@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Card, Col, Row, Statistic, Table, Tag, theme, Spin } from 'antd';
+import { Card, Col, Row, Statistic, Table, Tag, theme, Spin, Image, Empty } from 'antd';
 import {
   DatabaseOutlined,
   InboxOutlined,
   ExportOutlined,
   ImportOutlined,
 } from '@ant-design/icons';
-import { fetchMaterials, fetchSurplus, fetchRecent } from '../lib/api';
-import type { MaterialItem, SurplusItem, RecentRecord } from '../lib/api';
+import { fetchMaterials, fetchSurplus, fetchRecent, fetchPhotos, subscribePhotos } from '../lib/api';
+import type { MaterialItem, SurplusItem, RecentRecord, PhotoRecord } from '../lib/api';
 import type { ColumnsType } from 'antd/es/table';
 
 const materialColumns: ColumnsType<MaterialItem> = [
@@ -60,12 +60,23 @@ export default function Dashboard() {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [surplus, setSurplus] = useState<SurplusItem[]>([]);
   const [recent, setRecent] = useState<RecentRecord[]>([]);
+  const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([fetchMaterials(), fetchSurplus(), fetchRecent()])
       .then(([m, s, r]) => { setMaterials(m); setSurplus(s); setRecent(r); })
       .finally(() => setLoading(false));
+    // 照片单独加载，不影响主数据
+    fetchPhotos(6).then(setPhotos).catch(() => {});
+  }, []);
+
+  // Realtime 订阅新照片
+  useEffect(() => {
+    const channel = subscribePhotos((newPhoto) => {
+      setPhotos((prev) => [newPhoto, ...prev].slice(0, 6));
+    });
+    return () => { channel.unsubscribe(); };
   }, []);
 
   const materialTotal = materials.reduce((s, i) => s + i.quantity, 0);
@@ -106,6 +117,27 @@ export default function Dashboard() {
       </Card>
       <Card title="最近库存变动" style={{ marginTop: 24 }}>
         <Table columns={recentColumns} dataSource={recent} rowKey="id" pagination={false} size="middle" />
+      </Card>
+      <Card title="现场照片（最新）" style={{ marginTop: 24 }}>
+        {photos.length === 0 ? (
+          <Empty description="暂无照片" />
+        ) : (
+          <Row gutter={[12, 12]}>
+            {photos.map((p) => (
+              <Col xs={12} sm={8} lg={4} key={p.id}>
+                <Image
+                  src={p.photo_url}
+                  alt={p.taken_at}
+                  style={{ width: '100%', borderRadius: 6, objectFit: 'cover', aspectRatio: '4/3' }}
+                  preview={{ mask: `${p.operator} · ${p.taken_at}` }}
+                />
+                <div style={{ fontSize: 12, color: '#999', marginTop: 4, textAlign: 'center' }}>
+                  {p.operator} · {p.location_text || p.taken_at}
+                </div>
+              </Col>
+            ))}
+          </Row>
+        )}
       </Card>
     </div>
   );

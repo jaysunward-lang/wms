@@ -191,3 +191,53 @@ export async function registerUser(
   }
   return { success: true, message: '注册成功' };
 }
+
+/* ========== 照片相关 ========== */
+export interface PhotoRecord {
+  id?: number;
+  operator: string;
+  photo_url: string;
+  taken_at: string;
+  location_text: string;
+  created_at?: string;
+}
+
+export async function uploadPhoto(blob: Blob, filename: string): Promise<string> {
+  const { error } = await supabase.storage
+    .from('photos')
+    .upload(filename, blob, { contentType: 'image/jpeg', upsert: false });
+  if (error) throw error;
+  const { data } = supabase.storage.from('photos').getPublicUrl(filename);
+  return data.publicUrl;
+}
+
+export async function savePhotoRecord(
+  operator: string, photoUrl: string, takenAt: string, locationText: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('photos')
+    .insert({ operator, photo_url: photoUrl, taken_at: takenAt, location_text: locationText });
+  if (error) throw error;
+}
+
+export async function fetchPhotos(limit = 50): Promise<PhotoRecord[]> {
+  try {
+    const { data, error } = await supabase
+      .from('photos')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+export function subscribePhotos(onInsert: (record: PhotoRecord) => void) {
+  return supabase
+    .channel('photos-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'photos' },
+      (payload) => onInsert(payload.new as PhotoRecord))
+    .subscribe();
+}

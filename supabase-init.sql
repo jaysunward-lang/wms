@@ -49,3 +49,19 @@ create policy "Allow all for users" on users for all using (true) with check (tr
 create policy "Allow all for material_inventory" on material_inventory for all using (true) with check (true);
 create policy "Allow all for surplus_inventory" on surplus_inventory for all using (true) with check (true);
 create policy "Allow all for recent_records" on recent_records for all using (true) with check (true);
+
+-- 6. 照片表
+create table if not exists photos (
+  id bigint generated always as identity primary key,
+  operator text not null,
+  photo_url text not null,
+  taken_at text not null,
+  location_text text not null default '',
+  created_at timestamptz default now()
+);
+
+alter table photos enable row level security;
+create policy "Allow all for photos" on photos for all using (true) with check (true);
+
+-- 7. 开启 photos 表的 Realtime
+alter publication supabase_realtime add table photos;

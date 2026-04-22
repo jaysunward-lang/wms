@@ -10,6 +10,7 @@ import {
   LogoutOutlined,
   DatabaseOutlined,
   HomeOutlined,
+  PictureOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import type { MenuProps } from 'antd';
@@ -49,6 +50,11 @@ const menuItems: MenuProps['items'] = [
       { key: '/inbound/surplus', label: '多余库存入库' },
     ],
   },
+  {
+    key: '/photos',
+    icon: <PictureOutlined />,
+    label: '现场照片',
+  },
 ];
 
 const pageTitles: Record<string, string> = {
@@ -59,6 +65,7 @@ const pageTitles: Record<string, string> = {
   '/outbound/surplus': '多余库存出库',
   '/inbound/material': '物料入库',
   '/inbound/surplus': '多余库存入库',
+  '/photos': '现场照片',
 };
 
 export default function MainLayout() {
@@ -76,7 +83,8 @@ export default function MainLayout() {
       label: '退出登录',
       onClick: () => {
         localStorage.removeItem('wms_user');
-        navigate('/login');
+        localStorage.removeItem('wms_mode');
+        navigate('/entry');
       },
     },
   ];
