@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Form, InputNumber, Select, Button, App, DatePicker, Input, Col, Row, Spin } from 'antd';
 import dayjs from 'dayjs';
 import { fetchMaterials, updateMaterialQty, addRecentRecord } from '../../lib/api';
@@ -11,6 +11,8 @@ export default function MaterialOut() {
   const [locationOptions, setLocationOptions] = useState<{ label: string; value: string }[]>([]);
   const [selectedItem, setSelectedItem] = useState<MaterialItem | null>(null);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qtyRef = useRef<any>(null);
 
   useEffect(() => {
     fetchMaterials().then((data) => { setMaterials(data); setLoading(false); });
@@ -21,56 +23,38 @@ export default function MaterialOut() {
 
   const onMaterialChange = (name: string) => {
     const items = materials.filter((i) => i.material_name === name);
-    setLocationOptions(
-      items.map((i) => ({
-        label: `${i.location}（库存: ${i.quantity}${i.unit}）`,
-        value: i.location,
-      })),
-    );
-    const unit = items[0]?.unit || '';
+    setLocationOptions(items.map((i) => ({
+      label: `${i.location}（库存: ${i.quantity}${i.unit}）`, value: i.location,
+    })));
     setSelectedItem(null);
-    form.setFieldsValue({ location: undefined, quantity: undefined, unit });
+    form.setFieldsValue({ location: undefined, quantity: undefined, unit: items[0]?.unit || '' });
   };
 
   const onLocationChange = (loc: string) => {
     const name = form.getFieldValue('materialName');
-    const item = materials.find(
-      (i) => i.material_name === name && i.location === loc,
-    );
+    const item = materials.find((i) => i.material_name === name && i.location === loc);
     setSelectedItem(item || null);
     if (item) form.setFieldValue('unit', item.unit);
     form.setFieldValue('quantity', undefined);
+    setTimeout(() => qtyRef.current?.focus(), 50);
   };
 
-  const onFinish = (values: {
-    materialName: string;
-    location: string;
-    quantity: number;
-    unit: string;
-  }) => {
+  const onFinish = (values: { materialName: string; location: string; quantity: number; unit: string }) => {
     if (!selectedItem) return;
-
     modal.confirm({
       title: '确认出库',
       content: `确认将「${values.materialName}」从库位 ${values.location} 出库 ${values.quantity}${values.unit} 吗？`,
-      okText: '确认',
-      cancelText: '取消',
+      okText: '确认', cancelText: '取消',
       onOk: async () => {
         try {
           const now = dayjs().format('YYYY-MM-DD HH:mm');
           await updateMaterialQty(selectedItem.id!, selectedItem.quantity - values.quantity);
           await addRecentRecord(now, '出库', values.materialName, values.quantity);
           message.success('物料出库成功');
-          // 刷新数据
           const data = await fetchMaterials();
-          setMaterials(data);
-          setSelectedItem(null);
-          setLocationOptions([]);
-          form.resetFields();
-          form.setFieldValue('date', dayjs());
-        } catch {
-          message.error('出库失败，请重试');
-        }
+          setMaterials(data); setSelectedItem(null); setLocationOptions([]);
+          form.resetFields(); form.setFieldValue('date', dayjs());
+        } catch { message.error('出库失败，请重试'); }
       },
     });
   };
@@ -84,7 +68,8 @@ export default function MaterialOut() {
           filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())} />
       </Form.Item>
       <Form.Item label="库位" name="location" rules={[{ required: true, message: '请选择库位' }]}>
-        <Select placeholder={locationOptions.length ? '请选择库位' : '请先选择物料'} options={locationOptions} onChange={onLocationChange} disabled={!locationOptions.length} />
+        <Select placeholder={locationOptions.length ? '请选择库位' : '请先选择物料'}
+          options={locationOptions} onChange={onLocationChange} disabled={!locationOptions.length} />
       </Form.Item>
       {selectedItem && (
         <div style={{ marginTop: -16, marginBottom: 16, color: '#999', fontSize: 13 }}>
@@ -101,11 +86,12 @@ export default function MaterialOut() {
                 return Promise.resolve();
               }},
             ]}>
-              <InputNumber min={1} max={selectedItem?.quantity ?? undefined} placeholder="数量" style={{ width: '100%' }} />
+              <InputNumber ref={qtyRef} min={1} max={selectedItem?.quantity ?? undefined}
+                placeholder="数量" style={{ width: '100%' }} onPressEnter={() => form.submit()} />
             </Form.Item>
           </Col>
           <Col span={10}>
-            <Form.Item name="unit" rules={[{ required: true, message: '请选择物料后自动填充' }]}>
+            <Form.Item name="unit" rules={[{ required: true }]}>
               <Input placeholder="自动填充" disabled />
             </Form.Item>
           </Col>

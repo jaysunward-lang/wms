@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Form, Input, InputNumber, Button, App, DatePicker, AutoComplete } from 'antd';
 import dayjs from 'dayjs';
 import { upsertSurplus, addRecentRecord, fetchSurplus } from '../../lib/api';
+import type { InputRef } from 'antd';
 
 export default function SurplusIn() {
   const [form] = Form.useForm();
   const { message } = App.useApp();
   const [skuOptions, setSkuOptions] = useState<{ value: string }[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qtyRef = useRef<any>(null);
+  const locRef = useRef<InputRef>(null);
 
   useEffect(() => {
     fetchSurplus().then((items) => {
@@ -15,11 +19,7 @@ export default function SurplusIn() {
     });
   }, []);
 
-  const onFinish = async (values: {
-    surplusCode: string;
-    quantity: number;
-    location: string;
-  }) => {
+  const onFinish = async (values: { surplusCode: string; quantity: number; location: string }) => {
     try {
       const now = dayjs().format('YYYY-MM-DD HH:mm');
       await upsertSurplus(values.surplusCode, values.quantity, values.location);
@@ -27,22 +27,24 @@ export default function SurplusIn() {
       message.success('SKU 入库成功');
       form.resetFields();
       form.setFieldValue('date', dayjs());
-    } catch {
-      message.error('入库失败，请重试');
-    }
+    } catch { message.error('入库失败，请重试'); }
   };
 
   return (
     <Form form={form} layout="vertical" onFinish={onFinish} style={{ maxWidth: 480 }} initialValues={{ date: dayjs() }}>
       <Form.Item label="SKU" name="surplusCode" rules={[{ required: true, message: '请输入 SKU' }]}>
         <AutoComplete options={skuOptions} placeholder="输入 SKU（支持联想）"
-          filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())} />
+          filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
+          onSelect={() => setTimeout(() => qtyRef.current?.focus(), 50)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); qtyRef.current?.focus(); } }} />
       </Form.Item>
       <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入入库数量' }]}>
-        <InputNumber min={1} placeholder="请输入数量" style={{ width: '100%' }} />
+        <InputNumber ref={qtyRef} min={1} placeholder="请输入数量" style={{ width: '100%' }}
+          onPressEnter={() => locRef.current?.focus()} />
       </Form.Item>
       <Form.Item label="库位" name="location" rules={[{ required: true, message: '请输入库位' }]}>
-        <Input placeholder="请输入库位（如：D-01-01）" />
+        <Input ref={locRef} placeholder="请输入库位（如：D-01-01）"
+          onPressEnter={() => form.submit()} />
       </Form.Item>
       <Form.Item label="入库日期" name="date">
         <DatePicker style={{ width: '100%' }} />

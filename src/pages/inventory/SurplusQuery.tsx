@@ -50,7 +50,8 @@ export default function SurplusQuery() {
     <>
       <Form form={form} layout="inline" style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}>
         <Form.Item name="keyword">
-          <Input placeholder="SKU / 库位" allowClear style={{ width: 220 }} />
+          <Input placeholder="SKU / 库位" allowClear style={{ width: 220 }}
+            onPressEnter={onSearch} />
         </Form.Item>
         <Form.Item>
           <Space>
