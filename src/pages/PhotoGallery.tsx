@@ -92,8 +92,10 @@ export default function PhotoGallery() {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         message.success('已复制图片到剪贴板');
       } else {
-        // 多张：逐个下载为单独文件
-        for (const p of selected) {
+        // 多张：逐个下载为单独文件，间隔 500ms 避免浏览器拦截
+        for (let i = 0; i < selected.length; i++) {
+          if (i > 0) await new Promise((r) => setTimeout(r, 500));
+          const p = selected[i];
           const res = await fetch(p.photo_url, { mode: 'cors' });
           const blob = await res.blob();
           const url = URL.createObjectURL(blob);
