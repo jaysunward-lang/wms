@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Col, Row, Statistic, Table, Tag, theme, Spin, Image, Empty } from 'antd';
+import { Card, Col, Row, Statistic, Table, Tag, theme, Spin, Image, Empty, Radio } from 'antd';
 import {
   DatabaseOutlined,
   InboxOutlined,
@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [recent, setRecent] = useState<RecentRecord[]>([]);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recentFilter, setRecentFilter] = useState<string>('all');
 
   useEffect(() => {
     Promise.all([fetchMaterials(), fetchSurplus(), fetchRecent()])
@@ -82,6 +83,8 @@ export default function Dashboard() {
   const materialTotal = materials.reduce((s, i) => s + i.quantity, 0);
   const surplusTotal = surplus.reduce((s, i) => s + i.quantity, 0);
   const cardStyle = { borderRadius: token.borderRadius, height: '100%' };
+
+  const filteredRecent = recentFilter === 'all' ? recent : recent.filter((r) => r.type === recentFilter);
 
   if (loading) return <Spin size="large" style={{ display: 'block', margin: '80px auto' }} />;
 
@@ -115,8 +118,15 @@ export default function Dashboard() {
       <Card title="SKU 库存" style={{ marginTop: 24 }}>
         <Table columns={surplusColumns} dataSource={surplus} rowKey="id" pagination={false} size="middle" />
       </Card>
-      <Card title="最近库存变动" style={{ marginTop: 24 }}>
-        <Table columns={recentColumns} dataSource={recent} rowKey="id" pagination={false} size="middle" />
+      <Card title="最近库存变动" style={{ marginTop: 24 }}
+        extra={
+          <Radio.Group value={recentFilter} onChange={(e) => setRecentFilter(e.target.value)} size="small">
+            <Radio.Button value="all">全部</Radio.Button>
+            <Radio.Button value="入库">入库</Radio.Button>
+            <Radio.Button value="出库">出库</Radio.Button>
+          </Radio.Group>
+        }>
+        <Table columns={recentColumns} dataSource={filteredRecent} rowKey="id" pagination={false} size="middle" />
       </Card>
       <Card title="现场照片（最新）" style={{ marginTop: 24 }}>
         {photos.length === 0 ? (
