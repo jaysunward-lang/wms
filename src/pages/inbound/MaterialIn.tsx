@@ -6,7 +6,7 @@ import type { InputRef } from 'antd';
 
 export default function MaterialIn() {
   const [form] = Form.useForm();
-  const { message, notification } = App.useApp();
+  const { message } = App.useApp();
   const [nameOptions, setNameOptions] = useState<{ value: string }[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const qtyRef = useRef<any>(null);
@@ -20,28 +20,11 @@ export default function MaterialIn() {
     });
   }, []);
 
-  const onFinish = async (values: { materialName: string; quantity: number; unit: string; location: string; lowStockThreshold?: number }) => {
+  const onFinish = async (values: { materialName: string; quantity: number; unit: string; location: string }) => {
     try {
       const now = dayjs().format('YYYY-MM-DD HH:mm');
-      await upsertMaterial(values.materialName, values.unit, values.quantity, values.location, values.lowStockThreshold ?? null);
+      await upsertMaterial(values.materialName, values.unit, values.quantity, values.location);
       await addRecentRecord(now, '入库', values.materialName, values.quantity);
-
-      // Check low stock after inbound
-      if (values.lowStockThreshold != null) {
-        const items = await fetchMaterials();
-        const updated = items.find(
-          (i) => i.material_name === values.materialName && i.location === values.location
-        );
-        if (updated && updated.quantity <= values.lowStockThreshold) {
-          notification.warning({
-            message: '低库存警告',
-            description: `${values.materialName}（${values.location}）当前库存 ${updated.quantity} ${values.unit}，已低于或等于阈值 ${values.lowStockThreshold}`,
-            placement: 'bottomRight',
-            duration: 8,
-          });
-        }
-      }
-
       message.success('物料入库成功');
       form.resetFields();
       form.setFieldValue('date', dayjs());
@@ -56,23 +39,18 @@ export default function MaterialIn() {
           onSelect={() => setTimeout(() => qtyRef.current?.focus(), 50)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); qtyRef.current?.focus(); } }} />
       </Form.Item>
-      <Form.Item label="数量 / 单位 / 低库存阈值（选填）" required style={{ marginBottom: 0 }}>
+      <Form.Item label="数量 / 单位" required style={{ marginBottom: 0 }}>
         <Row gutter={12}>
-          <Col span={8}>
+          <Col span={12}>
             <Form.Item name="quantity" rules={[{ required: true, message: '请输入数量' }]}>
               <InputNumber ref={qtyRef} min={1} placeholder="数量" style={{ width: '100%' }}
                 onPressEnter={() => unitRef.current?.focus()} />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={12}>
             <Form.Item name="unit" rules={[{ required: true, message: '请输入单位' }]}>
               <Input ref={unitRef} placeholder="单位（个、米、张）"
                 onPressEnter={() => locRef.current?.focus()} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="lowStockThreshold">
-              <InputNumber min={0} placeholder="低库存阈值" style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>
