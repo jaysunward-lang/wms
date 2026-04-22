@@ -34,7 +34,9 @@ export default function SurplusQuery() {
     const { keyword } = form.getFieldsValue();
     if (keyword) {
       const kw = keyword.toLowerCase();
-      setData(allData.filter((i) => i.surplus_code.toLowerCase().includes(kw)));
+      setData(allData.filter((i) =>
+        i.surplus_code.toLowerCase().includes(kw) || i.location.toLowerCase().includes(kw)
+      ));
     } else {
       setData(allData);
     }
@@ -48,7 +50,7 @@ export default function SurplusQuery() {
     <>
       <Form form={form} layout="inline" style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}>
         <Form.Item name="keyword">
-          <Input placeholder="SKU" allowClear style={{ width: 220 }} />
+          <Input placeholder="SKU / 库位" allowClear style={{ width: 220 }} />
         </Form.Item>
         <Form.Item>
           <Space>

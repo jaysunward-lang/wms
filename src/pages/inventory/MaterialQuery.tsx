@@ -42,7 +42,9 @@ export default function MaterialQuery() {
     const { keyword } = form.getFieldsValue();
     if (keyword) {
       const kw = keyword.toLowerCase();
-      setData(allData.filter((i) => i.material_name.toLowerCase().includes(kw)));
+      setData(allData.filter((i) =>
+        i.material_name.toLowerCase().includes(kw) || i.location.toLowerCase().includes(kw)
+      ));
     } else {
       setData(allData);
     }
@@ -56,7 +58,7 @@ export default function MaterialQuery() {
     <>
       <Form form={form} layout="inline" style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}>
         <Form.Item name="keyword">
-          <Input placeholder="物料名称" allowClear style={{ width: 220 }} />
+          <Input placeholder="物料名称 / 库位" allowClear style={{ width: 220 }} />
         </Form.Item>
         <Form.Item>
           <Space>

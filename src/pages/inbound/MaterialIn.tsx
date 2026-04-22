@@ -1,10 +1,19 @@
-import { Form, Input, InputNumber, Button, App, DatePicker, Col, Row } from 'antd';
+import { useEffect, useState } from 'react';
+import { Form, Input, InputNumber, Button, App, DatePicker, Col, Row, AutoComplete } from 'antd';
 import dayjs from 'dayjs';
-import { upsertMaterial, addRecentRecord } from '../../lib/api';
+import { upsertMaterial, addRecentRecord, fetchMaterials } from '../../lib/api';
 
 export default function MaterialIn() {
   const [form] = Form.useForm();
   const { message } = App.useApp();
+  const [nameOptions, setNameOptions] = useState<{ value: string }[]>([]);
+
+  useEffect(() => {
+    fetchMaterials().then((items) => {
+      const names = [...new Set(items.map((i) => i.material_name))];
+      setNameOptions(names.map((n) => ({ value: n })));
+    });
+  }, []);
 
   const onFinish = async (values: {
     materialName: string;
@@ -33,7 +42,8 @@ export default function MaterialIn() {
       initialValues={{ date: dayjs() }}
     >
       <Form.Item label="物料名称" name="materialName" rules={[{ required: true, message: '请输入物料名称' }]}>
-        <Input placeholder="请输入物料名称" />
+        <AutoComplete options={nameOptions} placeholder="输入物料名称（支持联想）"
+          filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())} />
       </Form.Item>
       <Form.Item label="数量 / 单位" required style={{ marginBottom: 0 }}>
         <Row gutter={12}>

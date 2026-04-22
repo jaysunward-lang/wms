@@ -9,6 +9,7 @@ import {
 import { fetchMaterials, fetchSurplus, fetchRecent, fetchPhotos, subscribePhotos } from '../lib/api';
 import type { MaterialItem, SurplusItem, RecentRecord, PhotoRecord } from '../lib/api';
 import type { ColumnsType } from 'antd/es/table';
+import { useLocation } from 'react-router-dom';
 
 const materialColumns: ColumnsType<MaterialItem> = [
   { title: '物料名称', dataIndex: 'material_name', width: '30%' },
@@ -57,6 +58,7 @@ const recentColumns: ColumnsType<RecentRecord> = [
 
 export default function Dashboard() {
   const { token } = theme.useToken();
+  const location = useLocation();
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [surplus, setSurplus] = useState<SurplusItem[]>([]);
   const [recent, setRecent] = useState<RecentRecord[]>([]);
@@ -64,13 +66,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [recentFilter, setRecentFilter] = useState<string>('all');
 
+  // 每次进入首页都重新加载数据
   useEffect(() => {
+    setLoading(true);
     Promise.all([fetchMaterials(), fetchSurplus(), fetchRecent()])
       .then(([m, s, r]) => { setMaterials(m); setSurplus(s); setRecent(r); })
       .finally(() => setLoading(false));
-    // 照片单独加载，不影响主数据
     fetchPhotos(6).then(setPhotos).catch(() => {});
-  }, []);
+  }, [location.key]);
 
   // Realtime 订阅新照片
   useEffect(() => {
