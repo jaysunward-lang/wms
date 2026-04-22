@@ -1,3 +1,4 @@
+import logo from '../assets/logo.png';
 import { useState } from 'react';
 import { Layout, Menu, Button, Dropdown, theme } from 'antd';
 import {
@@ -8,7 +9,6 @@ import {
   MenuUnfoldOutlined,
   UserOutlined,
   LogoutOutlined,
-  DatabaseOutlined,
   HomeOutlined,
   PictureOutlined,
 } from '@ant-design/icons';
@@ -115,21 +115,16 @@ export default function MainLayout() {
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
           }}
         >
-          <DatabaseOutlined
-            style={{ fontSize: 24, color: token.colorPrimary }}
+          <img
+            src={logo}
+            alt="Sunward Logistics"
+            style={{
+              height: collapsed ? 32 : 40,
+              maxWidth: collapsed ? 32 : 180,
+              objectFit: 'contain',
+              transition: 'all 0.2s',
+            }}
           />
-          {!collapsed && (
-            <span
-              style={{
-                marginLeft: 10,
-                fontSize: 18,
-                fontWeight: 600,
-                color: token.colorPrimary,
-              }}
-            >
-              WMS 系统
-            </span>
-          )}
         </div>
         <Menu
           mode="inline"
