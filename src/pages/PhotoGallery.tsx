@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Col, Row, Image, Empty, Spin, Tag, Checkbox, Button, Space, App } from 'antd';
-import { DeleteOutlined, CopyOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownloadOutlined, CopyOutlined } from '@ant-design/icons';
 import { fetchPhotos, subscribePhotos, deletePhoto, deletePhotos } from '../lib/api';
 import type { PhotoRecord } from '../lib/api';
+import JSZip from 'jszip';
 
 export default function PhotoGallery() {
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
@@ -92,20 +93,24 @@ export default function PhotoGallery() {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         message.success('已复制图片到剪贴板');
       } else {
-        // 多张：逐个下载为单独文件，间隔 500ms 避免浏览器拦截
+        // 多张：打包成 zip 下载
+        const zip = new JSZip();
+        const folder = zip.folder(`WMS照片_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}`)!;
         for (let i = 0; i < selected.length; i++) {
-          if (i > 0) await new Promise((r) => setTimeout(r, 500));
           const p = selected[i];
           const res = await fetch(p.photo_url, { mode: 'cors' });
           const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `WMS_${p.operator}_${p.taken_at?.replace(/[: ]/g, '-') || p.id}.jpg`;
-          a.click();
-          URL.revokeObjectURL(url);
+          const name = `WMS_${p.operator}_${p.taken_at?.replace(/[: ]/g, '-') || p.id}.jpg`;
+          folder.file(name, blob);
         }
-        message.success(`已下载 ${selected.length} 张照片`);
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `WMS照片_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        message.success(`已打包下载 ${selected.length} 张照片`);
       }
     } catch {
       message.error('操作失败，请重试');
@@ -131,8 +136,8 @@ export default function PhotoGallery() {
             <Button danger icon={<DeleteOutlined />} onClick={handleDeleteSelected} loading={deleting}>
               删除选中 ({selectedCount})
             </Button>
-            <Button icon={<CopyOutlined />} onClick={handleCopy} loading={copying}>
-              {selectedCount === 1 ? '复制图片' : `下载图片 (${selectedCount})`}
+            <Button icon={selectedCount === 1 ? <CopyOutlined /> : <DownloadOutlined />} onClick={handleCopy} loading={copying}>
+              {selectedCount === 1 ? '复制图片' : `打包下载 (${selectedCount})`}
             </Button>
           </Space>
         )}
