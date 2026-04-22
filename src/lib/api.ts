@@ -27,13 +27,19 @@ export interface RecentRecord {
 }
 
 /* ========== 物料库存 ========== */
+const sortByLocation = <T extends { location: string }>(items: T[]): T[] =>
+  items.sort((a, b) => {
+    const na = parseInt(a.location, 10), nb = parseInt(b.location, 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.location.localeCompare(b.location);
+  });
+
 export async function fetchMaterials(): Promise<MaterialItem[]> {
   const { data, error } = await supabase
     .from('material_inventory')
-    .select('*')
-    .order('location', { ascending: true });
+    .select('*');
   if (error) throw error;
-  return data || [];
+  return sortByLocation(data || []);
 }
 
 export async function upsertMaterial(
@@ -82,8 +88,10 @@ export async function updateMaterialQty(
 export async function fetchSurplus(): Promise<SurplusItem[]> {
   const { data, error } = await supabase
     .from('surplus_inventory')
-    .select('*')
-    .order('location', { ascending: true });
+    .select('*');
+  if (error) throw error;
+  return sortByLocation(data || []);
+}
   if (error) throw error;
   return data || [];
 }
