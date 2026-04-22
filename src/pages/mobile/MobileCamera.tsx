@@ -116,14 +116,16 @@ export default function MobileCamera() {
     return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchmove', onMove); };
   }, [cameraReady, zoomLevel]);
 
-  // 确保 video 恢复播放
-  const ensureVideoPlaying = useCallback(async () => {
-    const video = videoRef.current;
-    if (video && streamRef.current) {
-      if (!video.srcObject) video.srcObject = streamRef.current;
-      if (video.paused) await video.play().catch(() => {});
+  // 确保 video 恢复播放（预览→拍照切换后重新绑定 stream）
+  useEffect(() => {
+    if (!previewUrl && cameraReady && videoRef.current && streamRef.current) {
+      const video = videoRef.current;
+      if (!video.srcObject || video.srcObject !== streamRef.current) {
+        video.srcObject = streamRef.current;
+      }
+      if (video.paused) video.play().catch(() => {});
     }
-  }, []);
+  }, [previewUrl, cameraReady]);
 
   // 拍照
   const capture = useCallback(() => {
@@ -207,17 +209,14 @@ export default function MobileCamera() {
       message.success('照片已上传');
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setCapturedBlob(null); setPreviewUrl(''); setAnnotations([]);
-      // 恢复摄像头
-      await ensureVideoPlaying();
     } catch { message.error('上传失败，请重试'); }
     finally { setUploading(false); }
-  }, [capturedBlob, annotations, operator, location, previewUrl, message, ensureVideoPlaying]);
+  }, [capturedBlob, annotations, operator, location, previewUrl, message]);
 
   const retake = useCallback(() => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setCapturedBlob(null); setPreviewUrl(''); setAnnotations([]); setEditingText(false);
-    ensureVideoPlaying();
-  }, [previewUrl, ensureVideoPlaying]);
+  }, [previewUrl]);
 
   const goBack = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
