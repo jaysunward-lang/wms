@@ -68,15 +68,46 @@ export default function PhotoGallery() {
     });
   }, [modal, message]);
 
-  // 复制选中照片 URL
+  // 复制选中照片到剪贴板（图片本身）
+  const [copying, setCopying] = useState(false);
   const handleCopy = useCallback(async () => {
     const selected = photos.filter((p) => selectedIds.has(p.id!));
     if (!selected.length) return;
-    const urls = selected.map((p) => p.photo_url).join('\n');
+    setCopying(true);
     try {
-      await navigator.clipboard.writeText(urls);
-      message.success(`已复制 ${selected.length} 张照片链接`);
-    } catch { message.error('复制失败'); }
+      // 加载所有选中的图片
+      const imgs = await Promise.all(selected.map((p) =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new window.Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = p.photo_url;
+        })
+      ));
+
+      // 合成到一张 canvas（多张图片纵向排列）
+      const gap = 8;
+      const maxW = Math.max(...imgs.map((i) => i.naturalWidth));
+      const totalH = imgs.reduce((sum, i) => sum + i.naturalHeight, 0) + gap * (imgs.length - 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = maxW;
+      canvas.height = totalH;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, maxW, totalH);
+      let y = 0;
+      for (const img of imgs) {
+        ctx.drawImage(img, 0, y, img.naturalWidth, img.naturalHeight);
+        y += img.naturalHeight + gap;
+      }
+
+      const blob = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      message.success(`已复制 ${selected.length} 张照片到剪贴板`);
+    } catch {
+      message.error('复制失败，请检查浏览器权限');
+    } finally { setCopying(false); }
   }, [photos, selectedIds, message]);
 
   if (loading) return <Spin size="large" style={{ display: 'block', margin: '80px auto' }} />;
@@ -98,8 +129,8 @@ export default function PhotoGallery() {
             <Button danger icon={<DeleteOutlined />} onClick={handleDeleteSelected} loading={deleting}>
               删除选中 ({selectedCount})
             </Button>
-            <Button icon={<CopyOutlined />} onClick={handleCopy}>
-              复制链接 ({selectedCount})
+            <Button icon={<CopyOutlined />} onClick={handleCopy} loading={copying}>
+              复制图片 ({selectedCount})
             </Button>
           </Space>
         )}
