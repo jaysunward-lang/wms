@@ -92,9 +92,6 @@ export async function fetchSurplus(): Promise<SurplusItem[]> {
   if (error) throw error;
   return sortByLocation(data || []);
 }
-  if (error) throw error;
-  return data || [];
-}
 
 export async function upsertSurplus(
   surplusCode: string,
