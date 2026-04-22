@@ -68,45 +68,45 @@ export default function PhotoGallery() {
     });
   }, [modal, message]);
 
-  // 复制选中照片到剪贴板（图片本身）
+  // 复制单张图片到剪贴板
   const [copying, setCopying] = useState(false);
   const handleCopy = useCallback(async () => {
     const selected = photos.filter((p) => selectedIds.has(p.id!));
     if (!selected.length) return;
     setCopying(true);
     try {
-      // 加载所有选中的图片
-      const imgs = await Promise.all(selected.map((p) =>
-        new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new window.Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => resolve(img);
+      if (selected.length === 1) {
+        // 单张：复制到剪贴板
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
           img.onerror = reject;
-          img.src = p.photo_url;
-        })
-      ));
-
-      // 合成到一张 canvas（多张图片纵向排列）
-      const gap = 8;
-      const maxW = Math.max(...imgs.map((i) => i.naturalWidth));
-      const totalH = imgs.reduce((sum, i) => sum + i.naturalHeight, 0) + gap * (imgs.length - 1);
-      const canvas = document.createElement('canvas');
-      canvas.width = maxW;
-      canvas.height = totalH;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, maxW, totalH);
-      let y = 0;
-      for (const img of imgs) {
-        ctx.drawImage(img, 0, y, img.naturalWidth, img.naturalHeight);
-        y += img.naturalHeight + gap;
+          img.src = selected[0].photo_url;
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d')!.drawImage(img, 0, 0);
+        const blob = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png'));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        message.success('已复制图片到剪贴板');
+      } else {
+        // 多张：逐个下载为单独文件
+        for (const p of selected) {
+          const res = await fetch(p.photo_url, { mode: 'cors' });
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `WMS_${p.operator}_${p.taken_at?.replace(/[: ]/g, '-') || p.id}.jpg`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+        message.success(`已下载 ${selected.length} 张照片`);
       }
-
-      const blob = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png'));
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      message.success(`已复制 ${selected.length} 张照片到剪贴板`);
     } catch {
-      message.error('复制失败，请检查浏览器权限');
+      message.error('操作失败，请重试');
     } finally { setCopying(false); }
   }, [photos, selectedIds, message]);
 
@@ -130,7 +130,7 @@ export default function PhotoGallery() {
               删除选中 ({selectedCount})
             </Button>
             <Button icon={<CopyOutlined />} onClick={handleCopy} loading={copying}>
-              复制图片 ({selectedCount})
+              {selectedCount === 1 ? '复制图片' : `下载图片 (${selectedCount})`}
             </Button>
           </Space>
         )}
