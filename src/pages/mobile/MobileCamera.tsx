@@ -449,8 +449,10 @@ export default function MobileCamera() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {/* 顶部返回 */}
           <div style={{
-            padding: '8px 12px', display: 'flex', alignItems: 'center',
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10,
+            padding: '8px 12px', background: 'rgba(0,0,0,0.4)',
             paddingTop: 'max(8px, env(safe-area-inset-top))',
+            display: 'flex', alignItems: 'center',
           }}>
             <Button type="text" icon={<ArrowLeftOutlined />} style={{ color: '#fff' }} onClick={goBack}>
               返回
@@ -477,7 +479,7 @@ export default function MobileCamera() {
             )}
             {cameraReady && (
               <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
+                position: 'absolute', bottom: 100, left: 0, right: 0,
                 background: 'rgba(0,0,0,0.55)', color: '#fff',
                 padding: '10px 14px', fontSize: 13, lineHeight: 1.6, zIndex: 2,
               }}>
@@ -487,10 +489,12 @@ export default function MobileCamera() {
             )}
           </div>
 
-          {/* 拍照按钮 */}
+          {/* 拍照按钮 - 固定在底部 */}
           <div style={{
-            padding: '16px 0', textAlign: 'center', background: '#111',
-            paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10,
+            padding: '16px 0', textAlign: 'center',
+            background: 'rgba(0,0,0,0.6)',
+            paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
           }}>
             <Button type="primary" shape="circle" size="large"
               icon={<CameraOutlined />} disabled={!cameraReady} onClick={capture}
