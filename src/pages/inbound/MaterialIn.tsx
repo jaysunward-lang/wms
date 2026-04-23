@@ -34,7 +34,7 @@ export default function MaterialIn() {
   return (
     <Form form={form} layout="vertical" onFinish={onFinish} style={{ maxWidth: 480 }} initialValues={{ date: dayjs() }}>
       <Form.Item label="物料名称" name="materialName" rules={[{ required: true, message: '请输入物料名称' }]}>
-        <AutoComplete options={nameOptions} placeholder="输入物料名称（支持联想）"
+        <AutoComplete options={nameOptions} placeholder="输入物料名称"
           filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
           onSelect={() => setTimeout(() => qtyRef.current?.focus(), 50)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); qtyRef.current?.focus(); } }} />
@@ -49,14 +49,14 @@ export default function MaterialIn() {
           </Col>
           <Col span={12}>
             <Form.Item name="unit" rules={[{ required: true, message: '请输入单位' }]}>
-              <Input ref={unitRef} placeholder="单位（个、米、张）"
+              <Input ref={unitRef} placeholder="单位"
                 onPressEnter={() => locRef.current?.focus()} />
             </Form.Item>
           </Col>
         </Row>
       </Form.Item>
       <Form.Item label="库位" name="location" rules={[{ required: true, message: '请输入库位' }]}>
-        <Input ref={locRef} placeholder="请输入库位（如：A-01-03）"
+        <Input ref={locRef} placeholder="请输入库位"
           onPressEnter={() => form.submit()} />
       </Form.Item>
       <Form.Item label="入库日期" name="date">

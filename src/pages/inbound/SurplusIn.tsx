@@ -33,7 +33,7 @@ export default function SurplusIn() {
   return (
     <Form form={form} layout="vertical" onFinish={onFinish} style={{ maxWidth: 480 }} initialValues={{ date: dayjs() }}>
       <Form.Item label="SKU" name="surplusCode" rules={[{ required: true, message: '请输入 SKU' }]}>
-        <AutoComplete options={skuOptions} placeholder="输入 SKU（支持联想）"
+        <AutoComplete options={skuOptions} placeholder="输入 SKU"
           filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
           onSelect={() => setTimeout(() => qtyRef.current?.focus(), 50)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); qtyRef.current?.focus(); } }} />
@@ -43,7 +43,7 @@ export default function SurplusIn() {
           onPressEnter={() => locRef.current?.focus()} />
       </Form.Item>
       <Form.Item label="库位" name="location" rules={[{ required: true, message: '请输入库位' }]}>
-        <Input ref={locRef} placeholder="请输入库位（如：D-01-01）"
+        <Input ref={locRef} placeholder="请输入库位"
           onPressEnter={() => form.submit()} />
       </Form.Item>
       <Form.Item label="入库日期" name="date">
