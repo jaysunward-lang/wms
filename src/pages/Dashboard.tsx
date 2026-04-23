@@ -120,10 +120,10 @@ export default function Dashboard() {
         </Col>
       </Row>
       <Card title="物料库存" style={{ marginTop: 24 }}>
-        <Table columns={materialColumns} dataSource={materials} rowKey="id" pagination={false} size="middle" />
+        <Table columns={materialColumns} dataSource={materials.slice(0, 5)} rowKey="id" pagination={false} size="middle" />
       </Card>
       <Card title="SKU 库存" style={{ marginTop: 24 }}>
-        <Table columns={surplusColumns} dataSource={surplus} rowKey="id" pagination={false} size="middle" />
+        <Table columns={surplusColumns} dataSource={surplus.slice(0, 5)} rowKey="id" pagination={false} size="middle" />
       </Card>
       <Card title="最近库存变动" style={{ marginTop: 24 }}
         extra={
@@ -133,7 +133,7 @@ export default function Dashboard() {
             <Radio.Button value="出库">出库</Radio.Button>
           </Radio.Group>
         }>
-        <Table columns={recentColumns} dataSource={filteredRecent} rowKey="id" pagination={false} size="middle" />
+        <Table columns={recentColumns} dataSource={filteredRecent.slice(0, 5)} rowKey="id" pagination={false} size="middle" />
       </Card>
       <Card title="现场照片（最新）" style={{ marginTop: 24 }}>
         {photos.length === 0 ? (
