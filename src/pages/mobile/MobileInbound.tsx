@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Form, Input, InputNumber, Button, App, AutoComplete, Modal, Segmented } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { Form, Input, InputNumber, Button, App, AutoComplete, Modal, Segmented, Tag } from 'antd';
+import { ArrowLeftOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
@@ -18,8 +18,10 @@ export default function MobileInbound() {
   const [surplusList, setSurplusList] = useState<{ surplus_code: string; quantity: number; location: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
-  // For auto-fill unit
   const [selectedUnit, setSelectedUnit] = useState('');
+  const [skuLocations, setSkuLocations] = useState<{ location: string; quantity: number }[]>([]);
+  const [currentSku, setCurrentSku] = useState('');
+  const [pickedLocation, setPickedLocation] = useState('');
 
   const loadData = () => {
     fetchMaterials().then((items) => {
@@ -42,7 +44,17 @@ export default function MobileInbound() {
   const resetForm = () => {
     setFormKey((k) => k + 1);
     setSelectedUnit('');
+    setSkuLocations([]);
+    setCurrentSku('');
+    setPickedLocation('');
     loadData();
+  };
+
+  const showSkuLocations = (code: string) => {
+    if (!code) { message.info('请先输入SKU'); return; }
+    const locs = surplusList.filter((i) => i.surplus_code === code);
+    setSkuLocations(locs.map((i) => ({ location: i.location, quantity: i.quantity })));
+    if (locs.length === 0) message.info('该SKU是新的，暂无库位记录');
   };
 
   const handleMaterialSubmit = async (values: { materialName: string; quantity: number; unit: string; location: string }) => {
@@ -124,10 +136,13 @@ export default function MobileInbound() {
             <Button type="primary" htmlType="submit" block size="large" loading={submitting}>提交入库</Button>
           </Form>
         ) : (
-          <Form key={`s-${formKey}`} layout="vertical" onFinish={handleSkuSubmit}>
+          <Form key={`s-${formKey}-${pickedLocation}`} layout="vertical" onFinish={handleSkuSubmit}
+            initialValues={{ location: pickedLocation }}>
             <Form.Item label="SKU" name="surplusCode" rules={[{ required: true, message: '请输入SKU' }]}>
               <AutoComplete options={skuOptions} placeholder="输入SKU"
-                filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())} />
+                filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
+                onSelect={(v) => { setCurrentSku(v); setSkuLocations([]); }}
+                onChange={(v) => { setCurrentSku(v); setSkuLocations([]); }} />
             </Form.Item>
             <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入数量' }]}>
               <InputNumber min={1} placeholder="数量" style={{ width: '100%' }} />
@@ -135,6 +150,21 @@ export default function MobileInbound() {
             <Form.Item label="库位" name="location" rules={[{ required: true, message: '请输入库位' }]}>
               <Input placeholder="库位" />
             </Form.Item>
+            <Button icon={<EnvironmentOutlined />} block style={{ marginBottom: 12 }}
+              onClick={() => showSkuLocations(currentSku)}>
+              推荐库位
+            </Button>
+            {skuLocations.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                {skuLocations.map((l) => (
+                  <Tag key={l.location} color="blue"
+                    style={{ cursor: 'pointer', marginBottom: 4, fontSize: 14, padding: '4px 8px' }}
+                    onClick={() => setPickedLocation(l.location)}>
+                    {l.location}（{l.quantity}件）
+                  </Tag>
+                ))}
+              </div>
+            )}
             <Button type="primary" htmlType="submit" block size="large" loading={submitting}>提交入库</Button>
           </Form>
         )}
