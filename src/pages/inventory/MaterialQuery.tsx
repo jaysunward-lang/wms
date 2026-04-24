@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Table, Input, Button, Space, Form, Tag, Spin } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import { fetchMaterials } from '../../lib/api';
 import type { MaterialItem } from '../../lib/api';
 import type { ColumnsType } from 'antd/es/table';
@@ -52,6 +52,18 @@ export default function MaterialQuery() {
 
   const onReset = () => { form.resetFields(); setData(allData); };
 
+  const exportCSV = () => {
+    const header = '\uFEFF物料名称,数量,单位,库位,更新时间\n';
+    const rows = allData.map((i) => `${i.material_name},${i.quantity},${i.unit},${i.location},${i.updated_at}`).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `物料库存_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return <Spin size="large" style={{ display: 'block', margin: '80px auto' }} />;
 
   return (
@@ -65,6 +77,7 @@ export default function MaterialQuery() {
           <Space>
             <Button type="primary" icon={<SearchOutlined />} onClick={onSearch}>查询</Button>
             <Button icon={<ReloadOutlined />} onClick={onReset}>重置</Button>
+            <Button icon={<DownloadOutlined />} onClick={exportCSV}>导出CSV</Button>
           </Space>
         </Form.Item>
       </Form>

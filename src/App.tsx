@@ -11,6 +11,7 @@ import SurplusIn from './pages/inbound/SurplusIn';
 import PhotoGallery from './pages/PhotoGallery';
 import MobileHome from './pages/mobile/MobileHome';
 import MobileCamera from './pages/mobile/MobileCamera';
+import MobileInbound from './pages/mobile/MobileInbound';
 
 function RootRedirect() {
   const user = localStorage.getItem('wms_user');
@@ -38,6 +39,7 @@ function App() {
       {/* 手机端 */}
       <Route path="/mobile" element={<MobileHome />} />
       <Route path="/mobile/camera" element={<MobileCamera />} />
+      <Route path="/mobile/inbound" element={<MobileInbound />} />
     </Routes>
   );
 }

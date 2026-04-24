@@ -1,5 +1,5 @@
 import { Button, Typography } from 'antd';
-import { CameraOutlined, LogoutOutlined } from '@ant-design/icons';
+import { CameraOutlined, LogoutOutlined, InboxOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
@@ -39,21 +39,38 @@ export default function MobileHome() {
         <Title level={3} style={{ marginBottom: 48, color: '#333' }}>
           WMS 仓库管理
         </Title>
-        <Button
-          type="primary"
-          shape="round"
-          size="large"
-          icon={<CameraOutlined />}
-          onClick={() => navigate('/mobile/camera')}
-          style={{
-            width: 200, height: 200, fontSize: 20,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            borderRadius: '50%',
-          }}
-        >
-          水印相机
-        </Button>
+        <div style={{ display: 'flex', gap: 32 }}>
+          <Button
+            type="primary"
+            shape="round"
+            size="large"
+            icon={<CameraOutlined />}
+            onClick={() => navigate('/mobile/camera')}
+            style={{
+              width: 140, height: 140, fontSize: 16,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              borderRadius: '50%',
+            }}
+          >
+            水印相机
+          </Button>
+          <Button
+            type="primary"
+            shape="round"
+            size="large"
+            icon={<InboxOutlined />}
+            onClick={() => navigate('/mobile/inbound')}
+            style={{
+              width: 140, height: 140, fontSize: 16,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              borderRadius: '50%', background: '#52c41a', borderColor: '#52c41a',
+            }}
+          >
+            入库
+          </Button>
+        </div>
       </div>
     </div>
   );
