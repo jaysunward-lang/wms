@@ -2,11 +2,13 @@ import { useEffect, useState, useRef } from 'react';
 import { Form, Input, InputNumber, Button, App, DatePicker, Col, Row, AutoComplete } from 'antd';
 import dayjs from 'dayjs';
 import { upsertMaterial, addRecentRecord, fetchMaterials } from '../../lib/api';
+import type { MaterialItem } from '../../lib/api';
 import type { InputRef } from 'antd';
 
 export default function MaterialIn() {
   const [form] = Form.useForm();
   const { message } = App.useApp();
+  const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [nameOptions, setNameOptions] = useState<{ value: string }[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const qtyRef = useRef<any>(null);
@@ -15,10 +17,19 @@ export default function MaterialIn() {
 
   useEffect(() => {
     fetchMaterials().then((items) => {
+      setMaterials(items);
       const names = [...new Set(items.map((i) => i.material_name))];
       setNameOptions(names.map((n) => ({ value: n })));
     });
   }, []);
+
+  const onNameSelect = (name: string) => {
+    const item = materials.find((i) => i.material_name === name);
+    if (item) {
+      form.setFieldValue('unit', item.unit);
+    }
+    setTimeout(() => qtyRef.current?.focus(), 50);
+  };
 
   const onFinish = async (values: { materialName: string; quantity: number; unit: string; location: string }) => {
     try {
@@ -36,7 +47,7 @@ export default function MaterialIn() {
       <Form.Item label="物料名称" name="materialName" rules={[{ required: true, message: '请输入物料名称' }]}>
         <AutoComplete options={nameOptions} placeholder="输入物料名称"
           filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
-          onSelect={() => setTimeout(() => qtyRef.current?.focus(), 50)}
+          onSelect={onNameSelect}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); qtyRef.current?.focus(); } }} />
       </Form.Item>
       <Form.Item label="数量 / 单位" required style={{ marginBottom: 0 }}>

@@ -35,6 +35,13 @@ export default function MobileInbound() {
 
   useEffect(() => { loadData(); }, []);
 
+  const onMaterialNameSelect = (name: string) => {
+    const item = materials.find((i) => i.material_name === name);
+    if (item) {
+      materialForm.setFieldValue('unit', item.unit);
+    }
+  };
+
   const handleMaterialSubmit = async (values: { materialName: string; quantity: number; unit: string; location: string }) => {
     const existing = materials.find(
       (i) => i.material_name === values.materialName && i.location === values.location
@@ -116,7 +123,8 @@ export default function MobileInbound() {
           <Form form={materialForm} layout="vertical" onFinish={handleMaterialSubmit}>
             <Form.Item label="物料名称" name="materialName" rules={[{ required: true, message: '请输入物料名称' }]}>
               <AutoComplete options={nameOptions} placeholder="输入物料名称"
-                filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())} />
+                filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
+                onSelect={onMaterialNameSelect} />
             </Form.Item>
             <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入数量' }]}>
               <InputNumber min={1} placeholder="数量" style={{ width: '100%' }} />
