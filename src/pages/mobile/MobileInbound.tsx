@@ -24,17 +24,20 @@ export default function MobileInbound() {
   const [pickedLocation, setPickedLocation] = useState('');
 
   const loadData = () => {
-    fetchMaterials().then((items) => {
-      setMaterials(items);
-      setNameOptions([...new Set(items.map((i) => i.material_name))].map((n) => ({ value: n })));
-    });
-    fetchSurplus().then((items) => {
-      setSurplusList(items);
-      setSkuOptions([...new Set(items.map((i) => i.surplus_code))].map((c) => ({ value: c })));
-    });
+    if (tab === '物料入库') {
+      fetchMaterials().then((items) => {
+        setMaterials(items);
+        setNameOptions([...new Set(items.map((i) => i.material_name))].map((n) => ({ value: n })));
+      });
+    } else {
+      fetchSurplus().then((items) => {
+        setSurplusList(items);
+        setSkuOptions([...new Set(items.map((i) => i.surplus_code))].map((c) => ({ value: c })));
+      });
+    }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [tab]);
 
   const onMaterialNameSelect = (name: string) => {
     const item = materials.find((i) => i.material_name === name);
