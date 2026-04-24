@@ -15,6 +15,7 @@ const PhotoGallery = lazy(() => import('./pages/PhotoGallery'));
 const MobileHome = lazy(() => import('./pages/mobile/MobileHome'));
 const MobileCamera = lazy(() => import('./pages/mobile/MobileCamera'));
 const MobileInbound = lazy(() => import('./pages/mobile/MobileInbound'));
+const MobilePhotoGallery = lazy(() => import('./pages/mobile/MobilePhotoGallery'));
 
 const Loading = () => <Spin size="large" style={{ display: 'block', margin: '80px auto' }} />;
 
@@ -44,6 +45,7 @@ function App() {
         <Route path="/mobile" element={<MobileHome />} />
         <Route path="/mobile/camera" element={<MobileCamera />} />
         <Route path="/mobile/inbound" element={<MobileInbound />} />
+        <Route path="/mobile/photos" element={<MobilePhotoGallery />} />
       </Routes>
     </Suspense>
   );
