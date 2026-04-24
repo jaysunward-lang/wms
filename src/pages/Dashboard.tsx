@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, Col, Row, Statistic, Table, Tag, theme, Spin, Image, Empty, Radio } from 'antd';
 import {
   DatabaseOutlined,
@@ -7,6 +7,7 @@ import {
   ImportOutlined,
 } from '@ant-design/icons';
 import { fetchMaterials, fetchSurplus, fetchRecent, fetchPhotos, subscribePhotos } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import type { MaterialItem, SurplusItem, RecentRecord, PhotoRecord } from '../lib/api';
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
@@ -66,18 +67,31 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [recentFilter, setRecentFilter] = useState<string>('all');
 
-  // 每次进入首页都重新加载数据
+  const refreshData = useCallback(() => {
+    Promise.all([fetchMaterials(), fetchSurplus(), fetchRecent()])
+      .then(([m, s, r]) => { setMaterials(m); setSurplus(s); setRecent(r); });
+    fetchPhotos(6).then(setPhotos).catch(() => {});
+  }, []);
+
+  // 首次加载
   useEffect(() => {
     setLoading(true);
     Promise.all([fetchMaterials(), fetchSurplus(), fetchRecent()])
-      .then(([m, s, r]) => {
-        setMaterials(m);
-        setSurplus(s);
-        setRecent(r);
-      })
+      .then(([m, s, r]) => { setMaterials(m); setSurplus(s); setRecent(r); })
       .finally(() => setLoading(false));
     fetchPhotos(6).then(setPhotos).catch(() => {});
   }, [location.key]);
+
+  // Realtime 订阅：物料、SKU、变动记录有变化时自动刷新
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'material_inventory' }, () => refreshData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'surplus_inventory' }, () => refreshData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'recent_records' }, () => refreshData())
+      .subscribe();
+    return () => { channel.unsubscribe(); };
+  }, [refreshData]);
 
   // Realtime 订阅新照片
   useEffect(() => {
