@@ -19,6 +19,7 @@ export default function MobileInbound() {
   const [materials, setMaterials] = useState<{ material_name: string; quantity: number; unit: string; location: string }[]>([]);
   const [surplusList, setSurplusList] = useState<{ surplus_code: string; quantity: number; location: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [formKey, setFormKey] = useState(0);
 
   const loadData = () => {
     fetchMaterials().then((items) => {
@@ -66,8 +67,7 @@ export default function MobileInbound() {
       await upsertMaterial(values.materialName, values.unit, values.quantity, values.location);
       await addRecentRecord(now, '入库', values.materialName, values.quantity);
       message.success('物料入库成功');
-      materialForm.resetFields();
-      materialForm.setFieldsValue({ materialName: '', quantity: undefined, unit: '', location: '' });
+      setFormKey((k) => k + 1);
       loadData();
     } catch { message.error('入库失败'); }
     finally { setSubmitting(false); }
@@ -97,8 +97,7 @@ export default function MobileInbound() {
       await upsertSurplus(values.surplusCode, values.quantity, values.location);
       await addRecentRecord(now, '入库', values.surplusCode, values.quantity);
       message.success('SKU 入库成功');
-      skuForm.resetFields();
-      skuForm.setFieldsValue({ surplusCode: '', quantity: undefined, location: '' });
+      setFormKey((k) => k + 1);
       loadData();
     } catch { message.error('入库失败'); }
     finally { setSubmitting(false); }
@@ -122,7 +121,7 @@ export default function MobileInbound() {
         />
 
         {tab === '物料入库' ? (
-          <Form form={materialForm} layout="vertical" onFinish={handleMaterialSubmit}>
+          <Form key={`material-${formKey}`} form={materialForm} layout="vertical" onFinish={handleMaterialSubmit}>
             <Form.Item label="物料名称" name="materialName" rules={[{ required: true, message: '请输入物料名称' }]}>
               <AutoComplete options={nameOptions} placeholder="输入物料名称"
                 filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
@@ -140,7 +139,7 @@ export default function MobileInbound() {
             <Button type="primary" htmlType="submit" block size="large" loading={submitting}>提交入库</Button>
           </Form>
         ) : (
-          <Form form={skuForm} layout="vertical" onFinish={handleSkuSubmit}>
+          <Form key={`sku-${formKey}`} form={skuForm} layout="vertical" onFinish={handleSkuSubmit}>
             <Form.Item label="SKU" name="surplusCode" rules={[{ required: true, message: '请输入SKU' }]}>
               <AutoComplete options={skuOptions} placeholder="输入SKU"
                 filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())} />
