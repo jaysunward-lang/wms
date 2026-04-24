@@ -67,6 +67,7 @@ export default function MobileInbound() {
       await addRecentRecord(now, '入库', values.materialName, values.quantity);
       message.success('物料入库成功');
       materialForm.resetFields();
+      materialForm.setFieldsValue({ materialName: '', quantity: undefined, unit: '', location: '' });
       loadData();
     } catch { message.error('入库失败'); }
     finally { setSubmitting(false); }
@@ -97,6 +98,7 @@ export default function MobileInbound() {
       await addRecentRecord(now, '入库', values.surplusCode, values.quantity);
       message.success('SKU 入库成功');
       skuForm.resetFields();
+      skuForm.setFieldsValue({ surplusCode: '', quantity: undefined, location: '' });
       loadData();
     } catch { message.error('入库失败'); }
     finally { setSubmitting(false); }
