@@ -12,25 +12,23 @@ export default function MobileInbound() {
   const { message } = App.useApp();
   const operator = localStorage.getItem('wms_user') || '操作员';
   const [tab, setTab] = useState<string>('物料入库');
-  const [materialForm] = Form.useForm();
-  const [skuForm] = Form.useForm();
   const [nameOptions, setNameOptions] = useState<{ value: string }[]>([]);
   const [skuOptions, setSkuOptions] = useState<{ value: string }[]>([]);
   const [materials, setMaterials] = useState<{ material_name: string; quantity: number; unit: string; location: string }[]>([]);
   const [surplusList, setSurplusList] = useState<{ surplus_code: string; quantity: number; location: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  // For auto-fill unit
+  const [selectedUnit, setSelectedUnit] = useState('');
 
   const loadData = () => {
     fetchMaterials().then((items) => {
       setMaterials(items);
-      const names = [...new Set(items.map((i) => i.material_name))];
-      setNameOptions(names.map((n) => ({ value: n })));
+      setNameOptions([...new Set(items.map((i) => i.material_name))].map((n) => ({ value: n })));
     });
     fetchSurplus().then((items) => {
       setSurplusList(items);
-      const codes = [...new Set(items.map((i) => i.surplus_code))];
-      setSkuOptions(codes.map((c) => ({ value: c })));
+      setSkuOptions([...new Set(items.map((i) => i.surplus_code))].map((c) => ({ value: c })));
     });
   };
 
@@ -38,67 +36,57 @@ export default function MobileInbound() {
 
   const onMaterialNameSelect = (name: string) => {
     const item = materials.find((i) => i.material_name === name);
-    if (item) {
-      materialForm.setFieldValue('unit', item.unit);
-    }
+    if (item) setSelectedUnit(item.unit);
+  };
+
+  const resetForm = () => {
+    setFormKey((k) => k + 1);
+    setSelectedUnit('');
+    loadData();
   };
 
   const handleMaterialSubmit = async (values: { materialName: string; quantity: number; unit: string; location: string }) => {
-    const existing = materials.find(
-      (i) => i.material_name === values.materialName && i.location === values.location
-    );
+    const existing = materials.find((i) => i.material_name === values.materialName && i.location === values.location);
     if (existing) {
       Modal.confirm({
         title: '库位已有库存',
         content: `库位 ${values.location} 已存在 ${existing.quantity}${existing.unit} 的「${values.materialName}」，是否继续入库？`,
-        okText: '继续入库',
-        cancelText: '取消',
+        okText: '继续入库', cancelText: '取消',
         onOk: () => doMaterialInbound(values),
       });
-    } else {
-      await doMaterialInbound(values);
-    }
+    } else { await doMaterialInbound(values); }
   };
 
   const doMaterialInbound = async (values: { materialName: string; quantity: number; unit: string; location: string }) => {
     setSubmitting(true);
     try {
-      const now = dayjs().format('YYYY-MM-DD HH:mm');
       await upsertMaterial(values.materialName, values.unit, values.quantity, values.location);
-      await addRecentRecord(now, '入库', values.materialName, values.quantity);
+      await addRecentRecord(dayjs().format('YYYY-MM-DD HH:mm'), '入库', values.materialName, values.quantity);
       message.success('物料入库成功');
-      setFormKey((k) => k + 1);
-      loadData();
+      resetForm();
     } catch { message.error('入库失败'); }
     finally { setSubmitting(false); }
   };
 
   const handleSkuSubmit = async (values: { surplusCode: string; quantity: number; location: string }) => {
-    const existing = surplusList.find(
-      (i) => i.surplus_code === values.surplusCode && i.location === values.location
-    );
+    const existing = surplusList.find((i) => i.surplus_code === values.surplusCode && i.location === values.location);
     if (existing) {
       Modal.confirm({
         title: '库位已有库存',
         content: `库位 ${values.location} 已存在 ${existing.quantity} 件的「${values.surplusCode}」，是否继续入库？`,
-        okText: '继续入库',
-        cancelText: '取消',
+        okText: '继续入库', cancelText: '取消',
         onOk: () => doSkuInbound(values),
       });
-    } else {
-      await doSkuInbound(values);
-    }
+    } else { await doSkuInbound(values); }
   };
 
   const doSkuInbound = async (values: { surplusCode: string; quantity: number; location: string }) => {
     setSubmitting(true);
     try {
-      const now = dayjs().format('YYYY-MM-DD HH:mm');
       await upsertSurplus(values.surplusCode, values.quantity, values.location);
-      await addRecentRecord(now, '入库', values.surplusCode, values.quantity);
+      await addRecentRecord(dayjs().format('YYYY-MM-DD HH:mm'), '入库', values.surplusCode, values.quantity);
       message.success('SKU 入库成功');
-      setFormKey((k) => k + 1);
-      loadData();
+      resetForm();
     } catch { message.error('入库失败'); }
     finally { setSubmitting(false); }
   };
@@ -112,16 +100,13 @@ export default function MobileInbound() {
         <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate('/mobile')} />
         <span style={{ fontSize: 16, fontWeight: 500, marginLeft: 8 }}>入库 - {operator}</span>
       </div>
-
       <div style={{ padding: 16 }}>
-        <Segmented
-          value={tab} onChange={(v) => setTab(v as string)}
-          options={['物料入库', 'SKU入库']}
-          block style={{ marginBottom: 20 }}
-        />
+        <Segmented value={tab} onChange={(v) => setTab(v as string)}
+          options={['物料入库', 'SKU入库']} block style={{ marginBottom: 20 }} />
 
         {tab === '物料入库' ? (
-          <Form key={`material-${formKey}`} form={materialForm} layout="vertical" onFinish={handleMaterialSubmit}>
+          <Form key={`m-${formKey}`} layout="vertical" onFinish={handleMaterialSubmit}
+            initialValues={{ unit: selectedUnit }}>
             <Form.Item label="物料名称" name="materialName" rules={[{ required: true, message: '请输入物料名称' }]}>
               <AutoComplete options={nameOptions} placeholder="输入物料名称"
                 filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
@@ -139,7 +124,7 @@ export default function MobileInbound() {
             <Button type="primary" htmlType="submit" block size="large" loading={submitting}>提交入库</Button>
           </Form>
         ) : (
-          <Form key={`sku-${formKey}`} form={skuForm} layout="vertical" onFinish={handleSkuSubmit}>
+          <Form key={`s-${formKey}`} layout="vertical" onFinish={handleSkuSubmit}>
             <Form.Item label="SKU" name="surplusCode" rules={[{ required: true, message: '请输入SKU' }]}>
               <AutoComplete options={skuOptions} placeholder="输入SKU"
                 filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())} />
