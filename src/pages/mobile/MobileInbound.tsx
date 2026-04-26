@@ -147,12 +147,12 @@ export default function MobileInbound() {
           </Form>
         ) : (
           <Form key={`s-${formKey}`} ref={skuFormRef} layout="vertical" onFinish={handleSkuSubmit}
-            initialValues={{ quantity: 1 }}>
+            initialValues={{}}>
             <Form.Item label="SKU" name="surplusCode" rules={[{ required: true, message: '请输入SKU' }]}>
               <AutoComplete options={skuOptions} placeholder="输入SKU"
                 filterOption={filterOption}
-                onSelect={(v) => { setCurrentSku(v); setSkuLocations([]); }}
-                onChange={setCurrentSku} />
+                onSelect={(v) => { setCurrentSku(v); setSkuLocations([]); if (!skuFormRef.current?.getFieldValue('quantity')) skuFormRef.current?.setFieldsValue({ quantity: 1 }); }}
+                onChange={(v) => { setCurrentSku(v); if (v && !skuFormRef.current?.getFieldValue('quantity')) skuFormRef.current?.setFieldsValue({ quantity: 1 }); }} />
             </Form.Item>
             <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入数量' }]}>
               <InputNumber min={1} placeholder="数量" style={{ width: '100%' }} />
