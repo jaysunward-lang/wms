@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Form, Input, InputNumber, Button, App, AutoComplete, Modal, Segmented, Tag } from 'antd';
+import type { FormInstance } from 'antd';
 import { ArrowLeftOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -21,7 +22,7 @@ export default function MobileInbound() {
   const [selectedUnit, setSelectedUnit] = useState('');
   const [skuLocations, setSkuLocations] = useState<{ location: string; quantity: number }[]>([]);
   const [currentSku, setCurrentSku] = useState('');
-  const [pickedLocation, setPickedLocation] = useState('');
+  const skuFormRef = useRef<FormInstance>(null);
 
   const loadData = () => {
     if (tab === '物料入库') {
@@ -49,7 +50,7 @@ export default function MobileInbound() {
     setSelectedUnit('');
     setSkuLocations([]);
     setCurrentSku('');
-    setPickedLocation('');
+    skuFormRef.current?.resetFields();
     loadData();
   };
 
@@ -139,8 +140,8 @@ export default function MobileInbound() {
             <Button type="primary" htmlType="submit" block size="large" loading={submitting}>提交入库</Button>
           </Form>
         ) : (
-          <Form key={`s-${formKey}-${pickedLocation}`} layout="vertical" onFinish={handleSkuSubmit}
-            initialValues={{ location: pickedLocation }}>
+          <Form key={`s-${formKey}`} ref={skuFormRef} layout="vertical" onFinish={handleSkuSubmit}
+            initialValues={{ quantity: 1 }}>
             <Form.Item label="SKU" name="surplusCode" rules={[{ required: true, message: '请输入SKU' }]}>
               <AutoComplete options={skuOptions} placeholder="输入SKU"
                 filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
@@ -162,7 +163,7 @@ export default function MobileInbound() {
                 {skuLocations.map((l) => (
                   <Tag key={l.location} color="blue"
                     style={{ cursor: 'pointer', marginBottom: 4, fontSize: 14, padding: '4px 8px' }}
-                    onClick={() => setPickedLocation(l.location)}>
+                    onClick={() => skuFormRef.current?.setFieldsValue({ location: l.location })}>
                     {l.location}（{l.quantity}件）
                   </Tag>
                 ))}
