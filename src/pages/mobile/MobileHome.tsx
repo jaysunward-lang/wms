@@ -1,6 +1,6 @@
 import type React from 'react';
-import { Button, Typography } from 'antd';
-import { CameraOutlined, LogoutOutlined, InboxOutlined, PictureOutlined } from '@ant-design/icons';
+import { Button, Typography, Tooltip } from 'antd';
+import { CameraOutlined, LogoutOutlined, InboxOutlined, PictureOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
@@ -38,9 +38,17 @@ export default function MobileHome() {
         borderBottom: '1px solid #f0f0f0',
       }}>
         <Text strong style={{ fontSize: 16 }}>操作人：{operator}</Text>
-        <Button type="text" danger icon={<LogoutOutlined />} onClick={handleExit}>
-          退出
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Tooltip title="切换到网页端">
+            <Button type="text" icon={<SwapOutlined />} onClick={() => {
+              localStorage.setItem('wms_mode', 'desktop');
+              navigate('/dashboard');
+            }} />
+          </Tooltip>
+          <Button type="text" danger icon={<LogoutOutlined />} onClick={handleExit}>
+            退出
+          </Button>
+        </div>
       </div>
 
       {/* 九宫格内容 */}

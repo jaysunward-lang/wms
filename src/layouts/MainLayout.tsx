@@ -1,6 +1,6 @@
 import logo from '../assets/logo.png';
 import { useState } from 'react';
-import { Layout, Menu, Button, Dropdown, theme } from 'antd';
+import { Layout, Menu, Button, Dropdown, theme, Tooltip } from 'antd';
 import {
   SearchOutlined,
   ExportOutlined,
@@ -11,6 +11,7 @@ import {
   LogoutOutlined,
   HomeOutlined,
   PictureOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import type { MenuProps } from 'antd';
@@ -154,11 +155,19 @@ export default function MainLayout() {
             />
             <span style={{ fontSize: 16, fontWeight: 500 }}>{pageTitle}</span>
           </div>
-          <Dropdown menu={{ items: userMenu }} placement="bottomRight">
-            <Button type="text" icon={<UserOutlined />}>
-              {currentUser}
-            </Button>
-          </Dropdown>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Tooltip title="切换到手机端">
+              <Button type="text" icon={<SwapOutlined />} onClick={() => {
+                localStorage.setItem('wms_mode', 'mobile');
+                navigate('/mobile');
+              }} />
+            </Tooltip>
+            <Dropdown menu={{ items: userMenu }} placement="bottomRight">
+              <Button type="text" icon={<UserOutlined />}>
+                {currentUser}
+              </Button>
+            </Dropdown>
+          </div>
         </Header>
         <Content style={{ margin: 24 }}>
           <div
