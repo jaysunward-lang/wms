@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Form, Input, InputNumber, Button, App, AutoComplete, Modal, Segmented, Tag } from 'antd';
 import type { FormInstance } from 'antd';
 import { ArrowLeftOutlined, EnvironmentOutlined } from '@ant-design/icons';
@@ -13,8 +13,6 @@ export default function MobileInbound() {
   const { message } = App.useApp();
   const operator = localStorage.getItem('wms_user') || '操作员';
   const [tab, setTab] = useState<string>('物料入库');
-  const [nameOptions, setNameOptions] = useState<{ value: string }[]>([]);
-  const [skuOptions, setSkuOptions] = useState<{ value: string }[]>([]);
   const [materials, setMaterials] = useState<{ material_name: string; quantity: number; unit: string; location: string }[]>([]);
   const [surplusList, setSurplusList] = useState<{ surplus_code: string; quantity: number; location: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -24,17 +22,20 @@ export default function MobileInbound() {
   const [currentSku, setCurrentSku] = useState('');
   const skuFormRef = useRef<FormInstance>(null);
 
+  const nameOptions = useMemo(
+    () => [...new Set(materials.map((i) => i.material_name))].map((n) => ({ value: n })),
+    [materials],
+  );
+  const skuOptions = useMemo(
+    () => [...new Set(surplusList.map((i) => i.surplus_code))].map((c) => ({ value: c })),
+    [surplusList],
+  );
+
   const loadData = () => {
     if (tab === '物料入库') {
-      fetchMaterials().then((items) => {
-        setMaterials(items);
-        setNameOptions([...new Set(items.map((i) => i.material_name))].map((n) => ({ value: n })));
-      });
+      fetchMaterials().then(setMaterials);
     } else {
-      fetchSurplus().then((items) => {
-        setSurplusList(items);
-        setSkuOptions([...new Set(items.map((i) => i.surplus_code))].map((c) => ({ value: c })));
-      });
+      fetchSurplus().then(setSurplusList);
     }
   };
 
@@ -53,6 +54,11 @@ export default function MobileInbound() {
     skuFormRef.current?.resetFields();
     loadData();
   };
+
+  const filterOption = useCallback(
+    (input: string, option?: { value: string }) => (option?.value ?? '').toLowerCase().includes(input.toLowerCase()),
+    [],
+  );
 
   const showSkuLocations = (code: string) => {
     if (!code) { message.info('请先输入SKU'); return; }
@@ -125,7 +131,7 @@ export default function MobileInbound() {
             initialValues={{ unit: selectedUnit }}>
             <Form.Item label="物料名称" name="materialName" rules={[{ required: true, message: '请输入物料名称' }]}>
               <AutoComplete options={nameOptions} placeholder="输入物料名称"
-                filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
+                filterOption={filterOption}
                 onSelect={onMaterialNameSelect} />
             </Form.Item>
             <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入数量' }]}>
@@ -144,9 +150,9 @@ export default function MobileInbound() {
             initialValues={{ quantity: 1 }}>
             <Form.Item label="SKU" name="surplusCode" rules={[{ required: true, message: '请输入SKU' }]}>
               <AutoComplete options={skuOptions} placeholder="输入SKU"
-                filterOption={(input, option) => (option?.value as string).toLowerCase().includes(input.toLowerCase())}
+                filterOption={filterOption}
                 onSelect={(v) => { setCurrentSku(v); setSkuLocations([]); }}
-                onChange={(v) => { setCurrentSku(v); setSkuLocations([]); }} />
+                onChange={setCurrentSku} />
             </Form.Item>
             <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入数量' }]}>
               <InputNumber min={1} placeholder="数量" style={{ width: '100%' }} />
