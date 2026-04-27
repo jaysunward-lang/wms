@@ -34,10 +34,6 @@ export default function PhotoGallery() {
     });
   }, []);
 
-  const selectAll = useCallback((checked: boolean) => {
-    setSelectedIds(checked ? new Set(photos.map((p) => p.id!)) : new Set());
-  }, [photos]);
-
   // 删除选中
   const handleDeleteSelected = useCallback(() => {
     const selected = photos.filter((p) => selectedIds.has(p.id!));
