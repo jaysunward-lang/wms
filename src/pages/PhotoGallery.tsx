@@ -119,7 +119,6 @@ export default function PhotoGallery() {
   }, [photos, selectedIds, message]);
 
   if (loading) return <Spin size="large" style={{ display: 'block', margin: '80px auto' }} />;
-  if (photos.length === 0) return <Empty description="暂无现场照片" />;
 
   const selectedCount = selectedIds.size;
   const allSelected = selectedCount === filteredPhotos.length && filteredPhotos.length > 0;
@@ -146,6 +145,9 @@ export default function PhotoGallery() {
         )}
       </div>
 
+      {filteredPhotos.length === 0 ? (
+        <Empty description="暂无现场照片" style={{ marginTop: 80 }} />
+      ) : (
       <Row gutter={[16, 16]}>
         {filteredPhotos.map((p) => (
           <Col xs={24} sm={12} md={8} lg={6} key={p.id}>
@@ -187,6 +189,7 @@ export default function PhotoGallery() {
           </Col>
         ))}
       </Row>
+      )}
     </div>
   );
 }
