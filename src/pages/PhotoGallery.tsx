@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Col, Row, Image, Empty, Spin, Tag, Checkbox, Button, Space, App } from 'antd';
+import { Card, Col, Row, Image, Empty, Spin, Tag, Checkbox, Button, Space, App, Segmented } from 'antd';
 import { DeleteOutlined, DownloadOutlined, CopyOutlined } from '@ant-design/icons';
 import { fetchPhotos, subscribePhotos, deletePhoto, deletePhotos } from '../lib/api';
 import type { PhotoRecord } from '../lib/api';
@@ -10,7 +10,12 @@ export default function PhotoGallery() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('全部');
   const { message, modal } = App.useApp();
+
+  const filteredPhotos = categoryFilter === '全部'
+    ? photos
+    : photos.filter((p) => p.category === categoryFilter);
 
   useEffect(() => {
     fetchPhotos(100).then(setPhotos).finally(() => setLoading(false));
@@ -121,14 +126,16 @@ export default function PhotoGallery() {
   if (photos.length === 0) return <Empty description="暂无现场照片" />;
 
   const selectedCount = selectedIds.size;
-  const allSelected = selectedCount === photos.length && photos.length > 0;
+  const allSelected = selectedCount === filteredPhotos.length && filteredPhotos.length > 0;
 
   return (
     <div>
       {/* 操作栏 */}
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <Segmented value={categoryFilter} onChange={(v) => { setCategoryFilter(v as string); setSelectedIds(new Set()); }}
+          options={['全部', '入库', '出库', '上架', '其他']} />
         <Checkbox checked={allSelected} indeterminate={selectedCount > 0 && !allSelected}
-          onChange={(e) => selectAll(e.target.checked)}>
+          onChange={(e) => setSelectedIds(e.target.checked ? new Set(filteredPhotos.map((p) => p.id!)) : new Set())}>
           全选
         </Checkbox>
         {selectedCount > 0 && (
@@ -144,7 +151,7 @@ export default function PhotoGallery() {
       </div>
 
       <Row gutter={[16, 16]}>
-        {photos.map((p) => (
+        {filteredPhotos.map((p) => (
           <Col xs={24} sm={12} md={8} lg={6} key={p.id}>
             <Card hoverable
               cover={
@@ -168,7 +175,13 @@ export default function PhotoGallery() {
               }
               styles={{ body: { padding: 12 } }}>
               <div style={{ fontSize: 13 }}>
-                <Tag color="blue">{p.operator}</Tag>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                  <Tag color="blue">{p.operator}</Tag>
+                  <Tag color={
+                    p.category === '入库' ? 'green' : p.category === '出库' ? 'orange' :
+                    p.category === '上架' ? 'purple' : 'default'
+                  }>{p.category || '其他'}</Tag>
+                </div>
                 <div style={{ marginTop: 6, color: '#666' }}>📅 {p.taken_at}</div>
                 {p.location_text && (
                   <div style={{ marginTop: 4, color: '#999', fontSize: 12 }}>📍 {p.location_text}</div>

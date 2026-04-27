@@ -57,6 +57,7 @@ create table if not exists photos (
   photo_url text not null,
   taken_at text not null,
   location_text text not null default '',
+  category text not null default '其他',
   created_at timestamptz default now()
 );
 

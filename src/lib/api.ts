@@ -201,6 +201,7 @@ export interface PhotoRecord {
   photo_url: string;
   taken_at: string;
   location_text: string;
+  category: string;
   created_at?: string;
 }
 
@@ -214,11 +215,11 @@ export async function uploadPhoto(blob: Blob, filename: string): Promise<string>
 }
 
 export async function savePhotoRecord(
-  operator: string, photoUrl: string, takenAt: string, locationText: string,
+  operator: string, photoUrl: string, takenAt: string, locationText: string, category = '其他',
 ): Promise<void> {
   const { error } = await supabase
     .from('photos')
-    .insert({ operator, photo_url: photoUrl, taken_at: takenAt, location_text: locationText });
+    .insert({ operator, photo_url: photoUrl, taken_at: takenAt, location_text: locationText, category });
   if (error) throw error;
 }
 

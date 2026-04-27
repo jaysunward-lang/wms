@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Button, App, Space, Typography, Spin, Input } from 'antd';
+import { Button, App, Space, Typography, Spin, Input, Segmented } from 'antd';
 import {
   CameraOutlined, ArrowLeftOutlined,
   ReloadOutlined, CloudUploadOutlined, FontSizeOutlined, CheckOutlined,
@@ -55,6 +55,7 @@ export default function MobileCamera() {
   const [textColor, setTextColor] = useState('#ffffff');
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const [category, setCategory] = useState('其他');
 
   // 实时时间
   useEffect(() => {
@@ -205,13 +206,13 @@ export default function MobileCamera() {
       const filename = `WMS_${Date.now()}.jpg`;
       const photoUrl = await uploadPhoto(finalBlob, filename);
       const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace('T', ' ');
-      await savePhotoRecord(operator, photoUrl, now, location?.address || '');
+      await savePhotoRecord(operator, photoUrl, now, location?.address || '', category);
       message.success('照片已上传');
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setCapturedBlob(null); setPreviewUrl(''); setAnnotations([]);
     } catch { message.error('上传失败，请重试'); }
     finally { setUploading(false); }
-  }, [capturedBlob, annotations, operator, location, previewUrl, message]);
+  }, [capturedBlob, annotations, operator, location, previewUrl, message, category]);
 
   const retake = useCallback(() => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -272,6 +273,11 @@ export default function MobileCamera() {
           <Button type="primary" icon={<CheckOutlined />} block onClick={addAnnotation} disabled={!textInput.trim()}>完成</Button>
         </div>
       )}
+      {/* 分类选择 */}
+      <div style={{ padding: '8px 20px', background: '#111', display: 'flex', justifyContent: 'center' }}>
+        <Segmented value={category} onChange={(v) => setCategory(v as string)}
+          options={['入库', '出库', '上架', '其他']} />
+      </div>
       {/* 底部操作栏 */}
       <Space style={{ padding: '12px 20px', justifyContent: 'center', background: '#111', width: '100%',
         paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }} size="middle">

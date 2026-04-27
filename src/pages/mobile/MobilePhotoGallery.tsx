@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Button, Image, Empty, Spin, Tag, App } from 'antd';
+import { Button, Image, Empty, Spin, Tag, App, Segmented } from 'antd';
 import { ArrowLeftOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { fetchPhotos, subscribePhotos, deletePhoto } from '../../lib/api';
@@ -11,6 +11,11 @@ export default function MobilePhotoGallery() {
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('全部');
+
+  const filteredPhotos = categoryFilter === '全部'
+    ? photos
+    : photos.filter((p) => p.category === categoryFilter);
 
   const load = useCallback(async () => {
     const data = await fetchPhotos(200);
@@ -69,14 +74,20 @@ export default function MobilePhotoGallery() {
         <Button type="text" icon={<ReloadOutlined />} loading={refreshing} onClick={handleRefresh} />
       </div>
 
+      {/* 分类筛选 */}
+      <div style={{ padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+        <Segmented value={categoryFilter} onChange={(v) => setCategoryFilter(v as string)}
+          options={['全部', '入库', '出库', '上架', '其他']} block size="small" />
+      </div>
+
       {/* 照片列表 */}
-      {photos.length === 0 ? (
+      {filteredPhotos.length === 0 ? (
         <div style={{ padding: '80px 0' }}>
           <Empty description="暂无现场照片" />
         </div>
       ) : (
         <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {photos.map((p) => (
+          {filteredPhotos.map((p) => (
             <div key={p.id} style={{
               background: '#fff', borderRadius: 8, overflow: 'hidden',
               boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
@@ -95,6 +106,10 @@ export default function MobilePhotoGallery() {
               <div style={{ padding: '8px 12px', fontSize: 13 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Tag color="blue" style={{ margin: 0 }}>{p.operator}</Tag>
+                  <Tag color={
+                    p.category === '入库' ? 'green' : p.category === '出库' ? 'orange' :
+                    p.category === '上架' ? 'purple' : 'default'
+                  } style={{ margin: 0 }}>{p.category || '其他'}</Tag>
                   <span style={{ color: '#666' }}>📅 {p.taken_at}</span>
                 </div>
                 {p.location_text && (
