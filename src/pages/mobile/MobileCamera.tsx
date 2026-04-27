@@ -274,9 +274,11 @@ export default function MobileCamera() {
         </div>
       )}
       {/* 分类选择 */}
-      <div style={{ padding: '8px 20px', background: '#111', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ padding: '10px 20px', background: '#222', borderTop: '1px solid #444',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <Text style={{ color: '#ccc', fontSize: 13 }}>选择照片分类</Text>
         <Segmented value={category} onChange={(v) => setCategory(v as string)}
-          options={['入库', '出库', '上架', '其他']} />
+          options={['入库', '出库', '上架', '其他']} block style={{ width: '100%' }} />
       </div>
       {/* 底部操作栏 */}
       <Space style={{ padding: '12px 20px', justifyContent: 'center', background: '#111', width: '100%',
