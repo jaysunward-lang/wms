@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Modal, Input, InputNumber, Button, Space, message, Spin } from 'antd';
+import { Modal, Input, InputNumber, Button, message, Spin } from 'antd';
 import {
   DeleteOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   RocketOutlined,
-  SettingOutlined,
 } from '@ant-design/icons';
 
 // ============ Types ============
@@ -37,7 +36,7 @@ type MarketType = 'A' | 'US' | 'HK';
 
 // ============ Constants ============
 const STORAGE_KEY = 'wms_stock_holdings_v2';
-const DEEPSEEK_KEY_STORAGE = 'wms_deepseek_key';
+const BAILIAN_API_KEY = 'YOUR_BAILIAN_API_KEY_HERE'; // 替换为你的阿里云百炼 API Key
 const FINNHUB_KEY = 'd7uejq1r01qnv95nauo0d7uejq1r01qnv95nauog';
 const COLOR_UP = '#00ff41';
 const COLOR_DOWN = '#ff0040';
@@ -125,14 +124,14 @@ async function fetchSingleQuote(code: string, marketType: string): Promise<{ pri
   }
 }
 
-async function analyzeWithDeepSeek(apiKey: string, topStocks: StockItem[], market: string): Promise<string> {
+async function analyzeWithAI(topStocks: StockItem[], market: string): Promise<string> {
   const marketName = market === 'A' ? 'A股' : market === 'US' ? '美股' : '港股';
   const stockInfo = topStocks.map(s => `${s.name}(${s.code}) 现价:${s.price} 涨幅:${s.changePercent}% 成交额:${(s.turnover / 100000000).toFixed(2)}亿`).join('\n');
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
+  const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${BAILIAN_API_KEY}` },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: 'qwen-plus',
       messages: [{ role: 'user', content: `你是一位资深${marketName}分析师。以下是今日${marketName}涨幅前20的股票数据：\n\n${stockInfo}\n\n请从中选出3-5只最具潜力的股票，对每只股票给出：\n1. 推荐理由（技术面+基本面）\n2. 该公司的发展历史（成立时间、主营业务、重大事件）\n3. 近期走势分析\n4. 风险提示\n\n请用中文详细回答，格式清晰。` }],
       temperature: 0.7,
       max_tokens: 4000,
@@ -249,9 +248,7 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   const [newQuantity, setNewQuantity] = useState<number | null>(null);
   const [newMarketType, setNewMarketType] = useState<MarketType>('US');
 
-  // DeepSeek
-  const [deepseekKey, setDeepseekKey] = useState(() => localStorage.getItem(DEEPSEEK_KEY_STORAGE) || '');
-  const [keyInput, setKeyInput] = useState('');
+  // AI state (no key needed - hardcoded)
   const [aiResult, setAiResult] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -352,22 +349,17 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   };
 
   const handleAnalyze = async () => {
-    if (!deepseekKey) { message.warning('请先设置 DeepSeek API Key'); return; }
+    if (!BAILIAN_API_KEY || BAILIAN_API_KEY === 'YOUR_BAILIAN_API_KEY_HERE') {
+      message.warning('请先在代码中配置百炼 API Key');
+      return;
+    }
     setAiLoading(true);
     try {
       const top20 = [...allStocks].sort((a, b) => b.changePercent - a.changePercent).slice(0, 20);
-      const result = await analyzeWithDeepSeek(deepseekKey, top20, market);
+      const result = await analyzeWithAI(top20, market);
       setAiResult(result);
     } catch { message.error('AI 分析失败'); }
     setAiLoading(false);
-  };
-
-  const saveKey = () => {
-    if (!keyInput.trim()) return;
-    setDeepseekKey(keyInput.trim());
-    localStorage.setItem(DEEPSEEK_KEY_STORAGE, keyInput.trim());
-    setKeyInput('');
-    message.success('API Key 已保存');
   };
 
   const getColor = (val: number) => val > 0 ? COLOR_UP : val < 0 ? COLOR_DOWN : COLOR_FLAT;
@@ -497,37 +489,23 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   // ============ AI Content ============
   const AiContent = (
     <div style={{ height: 'calc(85vh - 200px)', overflowY: 'auto' }}>
-      {!deepseekKey ? (
-        <div style={{ padding: 60, textAlign: 'center' }}>
-          <SettingOutlined style={{ fontSize: 36, color: '#333', marginBottom: 16 }} />
-          <p style={{ color: '#555', marginBottom: 16, fontFamily: 'monospace' }}>[ ENTER DEEPSEEK API KEY TO ACTIVATE AI ANALYSIS ]</p>
-          <Space>
-            <Input.Password placeholder="sk-..." value={keyInput} onChange={e => setKeyInput(e.target.value)} style={{ width: 280 }} />
-            <Button type="primary" onClick={saveKey} style={{ background: '#003300', borderColor: COLOR_UP }}>SAVE</Button>
-          </Space>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+        <Button icon={<RocketOutlined />} onClick={handleAnalyze} loading={aiLoading} size="large"
+          style={{ background: 'linear-gradient(135deg, #003300 0%, #001a00 100%)', border: `1px solid ${COLOR_UP}`, color: COLOR_UP, fontWeight: 700, fontFamily: 'monospace', boxShadow: GLOW_GREEN }}>
+          {aiLoading ? 'ANALYZING...' : `ANALYZE ${marketLabel[market]} POTENTIAL`}
+        </Button>
+        <span style={{ color: '#333', fontSize: 11, fontFamily: 'monospace' }}>// qwen-plus · top 20 gainers</span>
+      </div>
+      {aiLoading && (
+        <div style={{ textAlign: 'center', padding: 60 }}>
+          <Spin size="large" />
+          <p style={{ color: COLOR_UP, marginTop: 16, fontFamily: 'monospace', animation: 'glow-pulse 1.5s infinite' }}>[ QWEN NEURAL NETWORK PROCESSING... ]</p>
         </div>
-      ) : (
-        <>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-            <Button icon={<RocketOutlined />} onClick={handleAnalyze} loading={aiLoading} size="large"
-              style={{ background: 'linear-gradient(135deg, #003300 0%, #001a00 100%)', border: `1px solid ${COLOR_UP}`, color: COLOR_UP, fontWeight: 700, fontFamily: 'monospace', boxShadow: GLOW_GREEN }}>
-              {aiLoading ? 'ANALYZING...' : `ANALYZE ${marketLabel[market]} POTENTIAL`}
-            </Button>
-            <span style={{ color: '#333', fontSize: 11, fontFamily: 'monospace' }}>// based on top 20 gainers</span>
-            <Button size="small" style={{ marginLeft: 'auto' }} onClick={() => { setDeepseekKey(''); localStorage.removeItem(DEEPSEEK_KEY_STORAGE); }}>RESET KEY</Button>
-          </div>
-          {aiLoading && (
-            <div style={{ textAlign: 'center', padding: 60 }}>
-              <Spin size="large" />
-              <p style={{ color: COLOR_UP, marginTop: 16, fontFamily: 'monospace', animation: 'glow-pulse 1.5s infinite' }}>[ NEURAL NETWORK PROCESSING... ]</p>
-            </div>
-          )}
-          {aiResult && !aiLoading && (
-            <div style={{ background: '#050505', borderRadius: 4, padding: 20, border: `1px solid ${BORDER_COLOR}`, whiteSpace: 'pre-wrap', lineHeight: 1.8, color: '#00cc33', fontSize: 13, fontFamily: '"Courier New", monospace', boxShadow: 'inset 0 0 30px #00ff4108' }}>
-              {aiResult}
-            </div>
-          )}
-        </>
+      )}
+      {aiResult && !aiLoading && (
+        <div style={{ background: '#050505', borderRadius: 4, padding: 20, border: `1px solid ${BORDER_COLOR}`, whiteSpace: 'pre-wrap', lineHeight: 1.8, color: '#00cc33', fontSize: 13, fontFamily: '"Courier New", monospace', boxShadow: 'inset 0 0 30px #00ff4108' }}>
+          {aiResult}
+        </div>
       )}
     </div>
   );
