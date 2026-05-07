@@ -127,16 +127,50 @@ async function fetchSingleQuote(code: string, marketType: string): Promise<{ pri
 async function analyzeWithAI(topStocks: StockItem[], market: string): Promise<string> {
   const marketName = market === 'A' ? 'A股' : market === 'US' ? '美股' : '港股';
   const stockInfo = topStocks.map(s => `${s.name}(${s.code}) 现价:${s.price} 涨幅:${s.changePercent}% 成交额:${(s.turnover / 100000000).toFixed(2)}亿`).join('\n');
-  const res = await fetch('https://coding.dashscope.aliyuncs.com/v1/chat/completions', {
+  const prompt = `你是一位资深${marketName}分析师。以下是今日${marketName}涨幅前20的股票数据：\n\n${stockInfo}\n\n请从中选出3-5只最具潜力的股票，对每只股票给出：\n1. 推荐理由（技术面+基本面）\n2. 该公司的发展历史（成立时间、主营业务、重大事件）\n3. 近期走势分析\n4. 风险提示\n\n请用中文详细回答，格式清晰。`;
+
+  // 尝试多个百炼 API 端点
+  const endpoints = [
+    'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+    'https://coding.dashscope.aliyuncs.com/v1/chat/completions',
+  ];
+
+  // 先尝试 dashscope 原生接口
+  try {
+    const res = await fetch(endpoints[0], {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${BAILIAN_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'qwen-plus',
+        input: { messages: [{ role: 'user', content: prompt }] },
+        parameters: { temperature: 0.7, max_tokens: 4000 },
+      }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      return json.output?.text || json.output?.choices?.[0]?.message?.content || '分析完成但无内容返回';
+    }
+  } catch { /* fallback */ }
+
+  // fallback: OpenAI 兼容接口
+  const res = await fetch(endpoints[1], {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${BAILIAN_API_KEY}` },
     body: JSON.stringify({
       model: 'qwen-plus',
-      messages: [{ role: 'user', content: `你是一位资深${marketName}分析师。以下是今日${marketName}涨幅前20的股票数据：\n\n${stockInfo}\n\n请从中选出3-5只最具潜力的股票，对每只股票给出：\n1. 推荐理由（技术面+基本面）\n2. 该公司的发展历史（成立时间、主营业务、重大事件）\n3. 近期走势分析\n4. 风险提示\n\n请用中文详细回答，格式清晰。` }],
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 4000,
     }),
   });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('AI API error:', res.status, err);
+    return `接口返回 ${res.status} 错误。请确认 API Key 权限是否正确。`;
+  }
   const json = await res.json();
   return json.choices?.[0]?.message?.content || '分析失败，请稍后重试';
 }
