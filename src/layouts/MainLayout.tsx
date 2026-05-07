@@ -104,6 +104,11 @@ export default function MainLayout() {
         style={{
           borderRight: `1px solid ${token.colorBorderSecondary}`,
           background: '#fff',
+          overflow: 'hidden',
+          height: '100vh',
+          position: 'sticky',
+          top: 0,
+          left: 0,
         }}
       >
         <div
@@ -133,7 +138,7 @@ export default function MainLayout() {
           defaultOpenKeys={[openKeys.replace('/', '')]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
-          style={{ borderRight: 0, paddingTop: 8 }}
+          style={{ borderRight: 0, paddingTop: 8, overflowY: 'auto', height: 'calc(100vh - 64px)' }}
         />
       </Sider>
       <Layout>
