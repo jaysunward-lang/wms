@@ -38,6 +38,7 @@ type MarketType = 'A' | 'US' | 'HK';
 // ============ Constants ============
 const STORAGE_KEY = 'wms_stock_holdings_v2';
 const DEEPSEEK_KEY_STORAGE = 'wms_deepseek_key';
+const FINNHUB_KEY = 'd7uejq1r01qnv95nauo0d7uejq1r01qnv95nauog';
 const COLOR_UP = '#00ff41';
 const COLOR_DOWN = '#ff0040';
 const COLOR_FLAT = '#555';
@@ -47,11 +48,25 @@ const BORDER_COLOR = '#003300';
 const GLOW_GREEN = '0 0 10px #00ff41, 0 0 20px #00ff4133';
 const GLOW_RED = '0 0 10px #ff0040, 0 0 20px #ff004033';
 
+// Major US stock symbols for Finnhub real-time tracking
+const US_MAJOR_SYMBOLS = [
+  'AAPL','MSFT','GOOGL','AMZN','NVDA','META','TSLA','BRK.B','JPM','V',
+  'JNJ','WMT','MA','PG','UNH','HD','DIS','BAC','XOM','NFLX',
+  'ADBE','CRM','CSCO','PFE','INTC','VZ','KO','PEP','ABT','MRK',
+  'TMO','AVGO','COST','NKE','ORCL','ACN','LLY','AMD','QCOM','TXN',
+  'UPS','MS','GS','BLK','SCHW','AXP','PYPL','SQ','COIN','SNOW',
+  'PLTR','UBER','ABNB','RIVN','LCID','NIO','BABA','JD','PDD','BILI',
+  'MARA','RIOT','SOFI','HOOD','RBLX','U','DKNG','CRWD','ZS','NET',
+  'SHOP','SE','GRAB','MELI','NU','SPOT','SNAP','PINS','ROKU','TTD',
+  'PANW','FTNT','DDOG','MDB','OKTA','ZM','DOCU','TWLO','TEAM','NOW',
+  'WDAY','VEEV','SPLK','HUBS','BILL','CFLT','PATH','AI','SMCI','ARM',
+];
+
 // ============ API Functions ============
 const MARKET_URLS: Record<MarketType, string> = {
   A: `https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=5000&po=1&np=1&fltt=2&invt=2&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18`,
-  US: `https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=200&po=1&np=1&fltt=2&invt=2&fs=m:105,m:106,m:107&fields=f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18`,
-  HK: `https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=500&po=1&np=1&fltt=2&invt=2&fs=m:128+t:3,m:128+t:4,m:128+t:1,m:128+t:2&fields=f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18`,
+  US: `https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=3000&po=1&np=1&fltt=2&invt=2&fs=m:105,m:106,m:107&fields=f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18`,
+  HK: `https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=2500&po=1&np=1&fltt=2&invt=2&fs=m:128+t:3,m:128+t:4,m:128+t:1,m:128+t:2&fields=f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18`,
 };
 
 async function fetchStocks(market: MarketType): Promise<StockItem[]> {
@@ -78,10 +93,26 @@ async function fetchStocks(market: MarketType): Promise<StockItem[]> {
   }
 }
 
+// Finnhub real-time quote for US stocks
+async function fetchFinnhubQuote(symbol: string): Promise<{ price: number; changePercent: number; prevClose: number } | null> {
+  try {
+    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`);
+    const d = await res.json();
+    if (!d || d.c === 0) return null;
+    return { price: d.c, changePercent: d.dp, prevClose: d.pc };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchSingleQuote(code: string, marketType: string): Promise<{ price: number; changePercent: number; name: string } | null> {
+  if (marketType === 'US') {
+    const q = await fetchFinnhubQuote(code);
+    if (q) return { price: q.price, changePercent: q.changePercent, name: code };
+    return null;
+  }
   let secid = '';
   if (marketType === 'A') secid = `${code.startsWith('6') ? 1 : 0}.${code}`;
-  else if (marketType === 'US') secid = `105.${code}`;
   else if (marketType === 'HK') secid = `128.${code}`;
   try {
     const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}&fields=f43,f57,f58,f170`;
@@ -115,7 +146,6 @@ async function analyzeWithDeepSeek(apiKey: string, topStocks: StockItem[], marke
 function Sparkline({ changePercent, amplitude }: { changePercent: number; amplitude: number }) {
   const isUp = changePercent >= 0;
   const color = isUp ? COLOR_UP : COLOR_DOWN;
-  // Generate a pseudo-random sparkline based on change and amplitude
   const points: number[] = [];
   const seed = Math.abs(changePercent * 100 + amplitude * 10);
   for (let i = 0; i < 12; i++) {
@@ -125,7 +155,6 @@ function Sparkline({ changePercent, amplitude }: { changePercent: number; amplit
   }
   const w = 60, h = 20;
   const pathData = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${(i / 11) * w} ${h - p * h}`).join(' ');
-
   return (
     <svg width={w} height={h} style={{ display: 'block' }}>
       <defs>
@@ -191,13 +220,14 @@ const matrixStyles = `
   @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
   @keyframes flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.98; } }
   @keyframes glow-pulse { 0%, 100% { text-shadow: 0 0 5px currentColor; } 50% { text-shadow: 0 0 15px currentColor, 0 0 30px currentColor; } }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 `;
 
 // ============ Main Component ============
 interface StockPanelProps { open: boolean; onClose: () => void; }
 
 export default function StockPanel({ open, onClose }: StockPanelProps) {
-  const [market, setMarket] = useState<MarketType>('A');
+  const [market, setMarket] = useState<MarketType>('US');
   const [allStocks, setAllStocks] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -205,6 +235,9 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   const [sortDesc, setSortDesc] = useState(true);
   const [activeTab, setActiveTab] = useState<'market' | 'holdings' | 'ai'>('market');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [realtimePrices, setRealtimePrices] = useState<Record<string, { price: number; timestamp: number }>>({});
 
   // Holdings
   const [holdings, setHoldings] = useState<StockHolding[]>(() => {
@@ -214,7 +247,7 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   const [newCode, setNewCode] = useState('');
   const [newBuyPrice, setNewBuyPrice] = useState<number | null>(null);
   const [newQuantity, setNewQuantity] = useState<number | null>(null);
-  const [newMarketType, setNewMarketType] = useState<MarketType>('A');
+  const [newMarketType, setNewMarketType] = useState<MarketType>('US');
 
   // DeepSeek
   const [deepseekKey, setDeepseekKey] = useState(() => localStorage.getItem(DEEPSEEK_KEY_STORAGE) || '');
@@ -224,6 +257,37 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings)); }, [holdings]);
 
+  // ============ Finnhub WebSocket for real-time US stocks ============
+  useEffect(() => {
+    if (!open || market !== 'US') {
+      if (wsRef.current) { wsRef.current.close(); wsRef.current = null; setWsConnected(false); }
+      return;
+    }
+    const ws = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_KEY}`);
+    wsRef.current = ws;
+    ws.onopen = () => {
+      setWsConnected(true);
+      // Subscribe to major symbols
+      US_MAJOR_SYMBOLS.forEach(symbol => {
+        ws.send(JSON.stringify({ type: 'subscribe', symbol }));
+      });
+    };
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'trade' && data.data) {
+        const updates: Record<string, { price: number; timestamp: number }> = {};
+        for (const trade of data.data) {
+          updates[trade.s] = { price: trade.p, timestamp: trade.t };
+        }
+        setRealtimePrices(prev => ({ ...prev, ...updates }));
+      }
+    };
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    return () => { ws.close(); wsRef.current = null; setWsConnected(false); };
+  }, [open, market]);
+
+  // Fetch stock list (for initial data + A/HK markets)
   const loadStocks = useCallback(async () => {
     setLoading(true);
     const data = await fetchStocks(market);
@@ -232,10 +296,11 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   }, [market]);
 
   useEffect(() => {
-    if (open) { loadStocks(); timerRef.current = setInterval(loadStocks, 15000); }
+    if (open) { loadStocks(); timerRef.current = setInterval(loadStocks, market === 'US' ? 30000 : 15000); }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [open, loadStocks]);
+  }, [open, loadStocks, market]);
 
+  // Refresh holding quotes
   useEffect(() => {
     if (!open || holdings.length === 0) return;
     const refresh = async () => {
@@ -251,15 +316,29 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
     return () => clearInterval(t);
   }, [open, holdings]);
 
+  // Merge real-time prices into US stock list
   const displayStocks = useMemo(() => {
     let list = [...allStocks];
+    // For US market, overlay Finnhub real-time prices
+    if (market === 'US') {
+      list = list.map(stock => {
+        const rt = realtimePrices[stock.code];
+        if (rt && stock.prevClose > 0) {
+          const newPrice = rt.price;
+          const changeAmt = newPrice - stock.prevClose;
+          const changePct = (changeAmt / stock.prevClose) * 100;
+          return { ...stock, price: newPrice, changePercent: changePct, changeAmount: changeAmt };
+        }
+        return stock;
+      });
+    }
     if (search) {
       const s = search.toLowerCase();
       list = list.filter(item => item.code.toLowerCase().includes(s) || item.name.toLowerCase().includes(s));
     }
     list.sort((a, b) => sortDesc ? (b[sortBy] - a[sortBy]) : (a[sortBy] - b[sortBy]));
     return list;
-  }, [allStocks, search, sortBy, sortDesc]);
+  }, [allStocks, search, sortBy, sortDesc, market, realtimePrices]);
 
   const handleAddHolding = async () => {
     if (!newCode || !newBuyPrice || !newQuantity) { message.warning('请填写完整信息'); return; }
@@ -292,11 +371,11 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   };
 
   const getColor = (val: number) => val > 0 ? COLOR_UP : val < 0 ? COLOR_DOWN : COLOR_FLAT;
-  const marketLabel = { A: 'A股', US: '美股', HK: '港股' };
+  const marketLabel: Record<MarketType, string> = { A: 'A股', US: '美股', HK: '港股' };
 
   // ============ Market Selector ============
   const MarketSelector = (
-    <div style={{ display: 'flex', gap: 2, marginBottom: 12 }}>
+    <div style={{ display: 'flex', gap: 2, marginBottom: 12, alignItems: 'center' }}>
       {(['A', 'US', 'HK'] as MarketType[]).map(m => (
         <button key={m} onClick={() => setMarket(m)} style={{
           padding: '6px 16px', border: `1px solid ${market === m ? COLOR_UP : BORDER_COLOR}`,
@@ -307,6 +386,12 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
           [{marketLabel[m]}]
         </button>
       ))}
+      {market === 'US' && (
+        <span style={{ marginLeft: 12, fontSize: 10, fontFamily: 'monospace', color: wsConnected ? COLOR_UP : COLOR_DOWN }}>
+          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: wsConnected ? COLOR_UP : COLOR_DOWN, marginRight: 4, boxShadow: wsConnected ? GLOW_GREEN : GLOW_RED, animation: wsConnected ? 'blink 2s infinite' : 'none' }} />
+          {wsConnected ? 'FINNHUB REALTIME CONNECTED' : 'CONNECTING...'}
+        </span>
+      )}
     </div>
   );
 
@@ -335,18 +420,18 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
         <button onClick={() => { setSortBy('changePercent'); setSortDesc(false); }} style={{ padding: '4px 10px', border: `1px solid ${sortBy === 'changePercent' && !sortDesc ? COLOR_DOWN : BORDER_COLOR}`, background: sortBy === 'changePercent' && !sortDesc ? '#1a0000' : 'transparent', color: sortBy === 'changePercent' && !sortDesc ? COLOR_DOWN : '#555', fontFamily: 'monospace', fontSize: 11, cursor: 'pointer' }}>跌幅+</button>
         <button onClick={() => { setSortBy('turnover'); setSortDesc(true); }} style={{ padding: '4px 10px', border: `1px solid ${sortBy === 'turnover' ? '#ffab00' : BORDER_COLOR}`, background: sortBy === 'turnover' ? '#1a1500' : 'transparent', color: sortBy === 'turnover' ? '#ffab00' : '#555', fontFamily: 'monospace', fontSize: 11, cursor: 'pointer' }}>成交额</button>
         <span style={{ marginLeft: 'auto', color: '#333', fontSize: 11, fontFamily: 'monospace' }}>
-          TOTAL: {allStocks.length} | {loading ? 'LOADING...' : 'LIVE'}
+          TOTAL: {allStocks.length} | {loading ? 'LOADING...' : market === 'US' && wsConnected ? 'REALTIME' : 'LIVE'}
         </span>
         <Button size="small" icon={<ReloadOutlined />} onClick={loadStocks} loading={loading} />
       </div>
       {/* Header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '75px 100px 80px 80px 80px 70px 90px', gap: 4, padding: '6px 10px', borderBottom: `1px solid ${BORDER_COLOR}`, fontSize: 11, color: '#335533', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '80px 110px 80px 80px 80px 70px 90px', gap: 4, padding: '6px 10px', borderBottom: `1px solid ${BORDER_COLOR}`, fontSize: 11, color: '#335533', fontFamily: 'monospace', textTransform: 'uppercase' }}>
         <span>CODE</span><span>NAME</span><span>PRICE</span><span>CHG%</span><span>CHG</span><span>TREND</span><span>VOL</span>
       </div>
       {/* Rows */}
       <div style={{ flex: 1, overflowY: 'auto', marginTop: 2 }}>
         {displayStocks.map(stock => (
-          <div key={stock.code} className="stock-row" style={{ display: 'grid', gridTemplateColumns: '75px 100px 80px 80px 80px 70px 90px', gap: 4, padding: '5px 10px', borderBottom: `1px solid #0a0a0a`, fontSize: 12, alignItems: 'center', fontFamily: '"Courier New", monospace', transition: 'background 0.2s' }}>
+          <div key={stock.code} className="stock-row" style={{ display: 'grid', gridTemplateColumns: '80px 110px 80px 80px 80px 70px 90px', gap: 4, padding: '5px 10px', borderBottom: '1px solid #0a0a0a', fontSize: 12, alignItems: 'center', fontFamily: '"Courier New", monospace', transition: 'background 0.2s' }}>
             <span style={{ color: '#00aa30' }}>{stock.code}</span>
             <span style={{ color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stock.name}</span>
             <span style={{ color: getColor(stock.changePercent) }}>{stock.price.toFixed(2)}</span>
@@ -383,14 +468,14 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
         <div style={{ textAlign: 'center', color: '#333', padding: 60, fontFamily: 'monospace' }}>[ NO POSITIONS - ADD STOCKS TO TRACK ]</div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '50px 70px 90px 70px 80px 90px 36px', gap: 4, padding: '6px 10px', borderBottom: `1px solid ${BORDER_COLOR}`, fontSize: 10, color: '#335533', fontFamily: 'monospace' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '50px 80px 90px 70px 80px 100px 36px', gap: 4, padding: '6px 10px', borderBottom: `1px solid ${BORDER_COLOR}`, fontSize: 10, color: '#335533', fontFamily: 'monospace' }}>
             <span>MKT</span><span>CODE</span><span>NAME</span><span>PRICE</span><span>CHG</span><span>P&L</span><span></span>
           </div>
           {holdings.map(h => {
             const q = holdingQuotes[h.code];
             const profit = q ? (q.price - h.buyPrice) * h.quantity : 0;
             return (
-              <div key={h.code} style={{ display: 'grid', gridTemplateColumns: '50px 70px 90px 70px 80px 90px 36px', gap: 4, padding: '6px 10px', borderBottom: `1px solid #0a0a0a`, fontSize: 12, alignItems: 'center', fontFamily: 'monospace' }}>
+              <div key={h.code} style={{ display: 'grid', gridTemplateColumns: '50px 80px 90px 70px 80px 100px 36px', gap: 4, padding: '6px 10px', borderBottom: '1px solid #0a0a0a', fontSize: 12, alignItems: 'center', fontFamily: 'monospace' }}>
                 <span style={{ color: '#555', fontSize: 10 }}>[{h.marketType}]</span>
                 <span style={{ color: '#00aa30' }}>{h.code}</span>
                 <span style={{ color: '#aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
@@ -438,7 +523,7 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
             </div>
           )}
           {aiResult && !aiLoading && (
-            <div style={{ background: '#050505', borderRadius: 4, padding: 20, border: `1px solid ${BORDER_COLOR}`, whiteSpace: 'pre-wrap', lineHeight: 1.8, color: '#00cc33', fontSize: 13, fontFamily: '"Courier New", monospace', boxShadow: `inset 0 0 30px #00ff4108` }}>
+            <div style={{ background: '#050505', borderRadius: 4, padding: 20, border: `1px solid ${BORDER_COLOR}`, whiteSpace: 'pre-wrap', lineHeight: 1.8, color: '#00cc33', fontSize: 13, fontFamily: '"Courier New", monospace', boxShadow: 'inset 0 0 30px #00ff4108' }}>
               {aiResult}
             </div>
           )}
@@ -462,7 +547,7 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ color: COLOR_UP, fontSize: 16, fontFamily: '"Courier New", monospace', fontWeight: 700, textShadow: `0 0 10px ${COLOR_UP}`, animation: 'flicker 4s infinite' }}>
-            {'>'} STOCK_TERMINAL v2.0
+            {'>'} STOCK_TERMINAL v3.0
           </span>
           <span style={{ color: '#333', fontSize: 11, fontFamily: 'monospace' }}>// {new Date().toLocaleString()}</span>
         </div>
@@ -473,7 +558,6 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
       <style>{matrixStyles}</style>
       <MatrixRain />
       <div style={{ position: 'relative', zIndex: 1 }}>
-        {/* Scanline effect */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${COLOR_UP}22, transparent)`, animation: 'scanline 8s linear infinite', pointerEvents: 'none', zIndex: 10 }} />
         {MarketSelector}
         {TabSelector}
