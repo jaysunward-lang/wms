@@ -127,7 +127,7 @@ async function fetchSingleQuote(code: string, marketType: string): Promise<{ pri
 async function analyzeWithAI(topStocks: StockItem[], market: string): Promise<string> {
   const marketName = market === 'A' ? 'A股' : market === 'US' ? '美股' : '港股';
   const stockInfo = topStocks.map(s => `${s.name}(${s.code}) 现价:${s.price} 涨幅:${s.changePercent}% 成交额:${(s.turnover / 100000000).toFixed(2)}亿`).join('\n');
-  const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+  const res = await fetch('https://coding.dashscope.aliyuncs.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${BAILIAN_API_KEY}` },
     body: JSON.stringify({
