@@ -1,5 +1,5 @@
 import logo from '../assets/logo.png';
-import { useState } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { Layout, Menu, Button, Dropdown, theme, Tooltip } from 'antd';
 import {
   SearchOutlined,
@@ -15,6 +15,8 @@ import {
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import type { MenuProps } from 'antd';
+
+const StockPanel = lazy(() => import('../components/StockPanel'));
 
 const { Header, Sider, Content } = Layout;
 
@@ -71,9 +73,25 @@ const pageTitles: Record<string, string> = {
 
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  const [stockOpen, setStockOpen] = useState(false);
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
+
+  const handleSecretClick = () => {
+    clickCountRef.current += 1;
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    if (clickCountRef.current >= 8) {
+      clickCountRef.current = 0;
+      setStockOpen(true);
+    } else {
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+      }, 2000);
+    }
+  };
 
   const currentUser = localStorage.getItem('wms_user') || '操作员';
 
@@ -138,7 +156,16 @@ export default function MainLayout() {
           defaultOpenKeys={[openKeys.replace('/', '')]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
-          style={{ borderRight: 0, paddingTop: 8, overflowY: 'auto', height: 'calc(100vh - 64px)' }}
+          style={{ borderRight: 0, paddingTop: 8, overflowY: 'auto', height: 'calc(100vh - 64px - 32px)' }}
+        />
+        {/* 隐藏触发区域 */}
+        <div
+          onClick={handleSecretClick}
+          style={{
+            height: 32,
+            cursor: 'default',
+            userSelect: 'none',
+          }}
         />
       </Sider>
       <Layout>
@@ -187,6 +214,9 @@ export default function MainLayout() {
           </div>
         </Content>
       </Layout>
+      <Suspense fallback={null}>
+        <StockPanel open={stockOpen} onClose={() => setStockOpen(false)} />
+      </Suspense>
     </Layout>
   );
 }
