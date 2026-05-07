@@ -36,7 +36,7 @@ type MarketType = 'A' | 'US' | 'HK';
 
 // ============ Constants ============
 const STORAGE_KEY = 'wms_stock_holdings_v2';
-const BAILIAN_API_KEY = 'YOUR_BAILIAN_API_KEY_HERE'; // 替换为你的阿里云百炼 API Key
+const BAILIAN_API_KEY = 'sk-sp-9f8b34db2fc54a6382645a8e8ccd4113';
 const FINNHUB_KEY = 'd7uejq1r01qnv95nauo0d7uejq1r01qnv95nauog';
 const COLOR_UP = '#00ff41';
 const COLOR_DOWN = '#ff0040';
@@ -349,10 +349,6 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   };
 
   const handleAnalyze = async () => {
-    if (!BAILIAN_API_KEY || BAILIAN_API_KEY === 'YOUR_BAILIAN_API_KEY_HERE') {
-      message.warning('请先在代码中配置百炼 API Key');
-      return;
-    }
     setAiLoading(true);
     try {
       const top20 = [...allStocks].sort((a, b) => b.changePercent - a.changePercent).slice(0, 20);
