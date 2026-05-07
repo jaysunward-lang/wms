@@ -7,4 +7,13 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 600,
   },
+  server: {
+    proxy: {
+      '/api/ai': {
+        target: 'https://dashscope.aliyuncs.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ai/, '/api/v1/services/aigc/text-generation/generation'),
+      },
+    },
+  },
 })
