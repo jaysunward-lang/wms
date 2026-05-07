@@ -296,7 +296,7 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   }, [market]);
 
   useEffect(() => {
-    if (open) { loadStocks(); timerRef.current = setInterval(loadStocks, market === 'US' ? 30000 : 15000); }
+    if (open) { loadStocks(); timerRef.current = setInterval(loadStocks, market === 'US' ? 30000 : 3000); }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [open, loadStocks, market]);
 
@@ -420,7 +420,7 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
         <button onClick={() => { setSortBy('changePercent'); setSortDesc(false); }} style={{ padding: '4px 10px', border: `1px solid ${sortBy === 'changePercent' && !sortDesc ? COLOR_DOWN : BORDER_COLOR}`, background: sortBy === 'changePercent' && !sortDesc ? '#1a0000' : 'transparent', color: sortBy === 'changePercent' && !sortDesc ? COLOR_DOWN : '#555', fontFamily: 'monospace', fontSize: 11, cursor: 'pointer' }}>跌幅+</button>
         <button onClick={() => { setSortBy('turnover'); setSortDesc(true); }} style={{ padding: '4px 10px', border: `1px solid ${sortBy === 'turnover' ? '#ffab00' : BORDER_COLOR}`, background: sortBy === 'turnover' ? '#1a1500' : 'transparent', color: sortBy === 'turnover' ? '#ffab00' : '#555', fontFamily: 'monospace', fontSize: 11, cursor: 'pointer' }}>成交额</button>
         <span style={{ marginLeft: 'auto', color: '#333', fontSize: 11, fontFamily: 'monospace' }}>
-          TOTAL: {allStocks.length} | {loading ? 'LOADING...' : market === 'US' && wsConnected ? 'REALTIME' : 'LIVE'}
+          TOTAL: {allStocks.length} | {loading ? 'LOADING...' : market === 'US' && wsConnected ? 'REALTIME ⚡' : 'LIVE 3s'}
         </span>
         <Button size="small" icon={<ReloadOutlined />} onClick={loadStocks} loading={loading} />
       </div>
