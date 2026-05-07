@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Modal, Input, InputNumber, Button, message, Spin } from 'antd';
+import { Modal, Input, InputNumber, Button, message } from 'antd';
 import {
   DeleteOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  RocketOutlined,
 } from '@ant-design/icons';
 
 // ============ Types ============
@@ -36,7 +35,6 @@ type MarketType = 'A' | 'US' | 'HK';
 
 // ============ Constants ============
 const STORAGE_KEY = 'wms_stock_holdings_v2';
-const BAILIAN_API_KEY = 'sk-sp-9f8b34db2fc54a6382645a8e8ccd4113';
 const FINNHUB_KEY = 'd7uejq1r01qnv95nauo0d7uejq1r01qnv95nauog';
 const COLOR_UP = '#00ff41';
 const COLOR_DOWN = '#ff0040';
@@ -122,33 +120,6 @@ async function fetchSingleQuote(code: string, marketType: string): Promise<{ pri
   } catch {
     return null;
   }
-}
-
-async function analyzeWithAI(topStocks: StockItem[], market: string): Promise<string> {
-  const marketName = market === 'A' ? 'A股' : market === 'US' ? '美股' : '港股';
-  const stockInfo = topStocks.map(s => `${s.name}(${s.code}) 现价:${s.price} 涨幅:${s.changePercent}% 成交额:${(s.turnover / 100000000).toFixed(2)}亿`).join('\n');
-  const prompt = `你是一位资深${marketName}分析师。以下是今日${marketName}涨幅前20的股票数据：\n\n${stockInfo}\n\n请从中选出3-5只最具潜力的股票，对每只股票给出：\n1. 推荐理由（技术面+基本面）\n2. 该公司的发展历史（成立时间、主营业务、重大事件）\n3. 近期走势分析\n4. 风险提示\n\n请用中文详细回答，格式清晰。`;
-
-  // 通过 Vite 代理转发到百炼，绕过 CORS
-  const res = await fetch('/api/ai', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${BAILIAN_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'qwen-plus',
-      input: { messages: [{ role: 'user', content: prompt }] },
-      parameters: { temperature: 0.7, max_tokens: 4000 },
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    console.error('AI API error:', res.status, err);
-    return `接口返回 ${res.status} 错误：${err.slice(0, 200)}`;
-  }
-  const json = await res.json();
-  return json.output?.text || json.output?.choices?.[0]?.message?.content || '分析失败，请稍后重试';
 }
 
 // ============ Mini Sparkline Component ============
@@ -242,7 +213,7 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'changePercent' | 'turnover'>('changePercent');
   const [sortDesc, setSortDesc] = useState(true);
-  const [activeTab, setActiveTab] = useState<'market' | 'holdings' | 'ai'>('market');
+  const [activeTab, setActiveTab] = useState<'market' | 'holdings'>('market');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
@@ -257,10 +228,6 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   const [newBuyPrice, setNewBuyPrice] = useState<number | null>(null);
   const [newQuantity, setNewQuantity] = useState<number | null>(null);
   const [newMarketType, setNewMarketType] = useState<MarketType>('US');
-
-  // AI state (no key needed - hardcoded)
-  const [aiResult, setAiResult] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings)); }, [holdings]);
 
@@ -358,16 +325,6 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
     message.success(`已添加 ${q.name}`);
   };
 
-  const handleAnalyze = async () => {
-    setAiLoading(true);
-    try {
-      const top20 = [...allStocks].sort((a, b) => b.changePercent - a.changePercent).slice(0, 20);
-      const result = await analyzeWithAI(top20, market);
-      setAiResult(result);
-    } catch { message.error('AI 分析失败'); }
-    setAiLoading(false);
-  };
-
   const getColor = (val: number) => val > 0 ? COLOR_UP : val < 0 ? COLOR_DOWN : COLOR_FLAT;
   const marketLabel: Record<MarketType, string> = { A: 'A股', US: '美股', HK: '港股' };
 
@@ -396,7 +353,7 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
   // ============ Tab Selector ============
   const TabSelector = (
     <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: `1px solid ${BORDER_COLOR}` }}>
-      {([['market', '> 实时行情'], ['holdings', '> 我的持仓'], ['ai', '> 潜力股分析']] as const).map(([key, label]) => (
+      {([['market', '> 实时行情'], ['holdings', '> 我的持仓']] as const).map(([key, label]) => (
         <button key={key} onClick={() => setActiveTab(key)} style={{
           padding: '8px 20px', border: 'none', borderBottom: activeTab === key ? `2px solid ${COLOR_UP}` : '2px solid transparent',
           background: 'transparent', color: activeTab === key ? COLOR_UP : '#555',
@@ -492,30 +449,6 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
     </div>
   );
 
-  // ============ AI Content ============
-  const AiContent = (
-    <div style={{ height: 'calc(85vh - 200px)', overflowY: 'auto' }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-        <Button icon={<RocketOutlined />} onClick={handleAnalyze} loading={aiLoading} size="large"
-          style={{ background: 'linear-gradient(135deg, #003300 0%, #001a00 100%)', border: `1px solid ${COLOR_UP}`, color: COLOR_UP, fontWeight: 700, fontFamily: 'monospace', boxShadow: GLOW_GREEN }}>
-          {aiLoading ? 'ANALYZING...' : `ANALYZE ${marketLabel[market]} POTENTIAL`}
-        </Button>
-        <span style={{ color: '#333', fontSize: 11, fontFamily: 'monospace' }}>// qwen-plus · top 20 gainers</span>
-      </div>
-      {aiLoading && (
-        <div style={{ textAlign: 'center', padding: 60 }}>
-          <Spin size="large" />
-          <p style={{ color: COLOR_UP, marginTop: 16, fontFamily: 'monospace', animation: 'glow-pulse 1.5s infinite' }}>[ QWEN NEURAL NETWORK PROCESSING... ]</p>
-        </div>
-      )}
-      {aiResult && !aiLoading && (
-        <div style={{ background: '#050505', borderRadius: 4, padding: 20, border: `1px solid ${BORDER_COLOR}`, whiteSpace: 'pre-wrap', lineHeight: 1.8, color: '#00cc33', fontSize: 13, fontFamily: '"Courier New", monospace', boxShadow: 'inset 0 0 30px #00ff4108' }}>
-          {aiResult}
-        </div>
-      )}
-    </div>
-  );
-
   // ============ Return ============
   return (
     <Modal
@@ -547,7 +480,6 @@ export default function StockPanel({ open, onClose }: StockPanelProps) {
         {TabSelector}
         {activeTab === 'market' && MarketContent}
         {activeTab === 'holdings' && HoldingsContent}
-        {activeTab === 'ai' && AiContent}
       </div>
     </Modal>
   );
